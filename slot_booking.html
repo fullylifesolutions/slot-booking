@@ -6,7 +6,7 @@
 <title>Prenota un incontro</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Sora:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
-:root{--bg:#0f0f0f;--bg2:#1a1a1a;--bg3:#242424;--bg4:#2e2e2e;--border:#333;--border2:#444;--text:#f0f0f0;--text2:#999;--text3:#666;--accent:#7c6fcd;--accent2:#a99ef0;--accent-bg:rgba(124,111,205,0.12);--green:#4caf7d;--green-bg:rgba(76,175,125,0.12);--red:#e05252;--radius:8px;--radius-lg:12px;}
+:root{--bg:#0f0f0f;--bg2:#1a1a1a;--bg3:#242424;--bg4:#2e2e2e;--border:#333;--border2:#444;--text:#f0f0f0;--text2:#999;--text3:#666;--accent:#7c6fcd;--accent2:#a99ef0;--accent-bg:rgba(124,111,205,0.12);--green:#4caf7d;--green-bg:rgba(76,175,125,0.12);--amber:#e8a838;--amber-bg:rgba(232,168,56,0.12);--red:#e05252;--red-bg:rgba(224,82,82,0.12);--radius:8px;--radius-lg:12px;}
 *{box-sizing:border-box;margin:0;padding:0;}
 body{font-family:'Sora',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex;flex-direction:column;}
 .header{padding:20px 24px;border-bottom:1px solid var(--border);background:var(--bg2);text-align:center;}
@@ -33,16 +33,19 @@ body{font-family:'Sora',sans-serif;background:var(--bg);color:var(--text);min-he
 .slot-btn.booked{background:var(--bg3);border-color:var(--border);color:var(--text3);cursor:not-allowed;opacity:.5;}
 .slot-time-big{font-size:16px;font-weight:600;}
 .slot-avail{font-size:10px;color:var(--text3);margin-top:3px;}
-.slot-btn.selected .slot-avail,.slot-btn:not(.booked):hover .slot-avail{color:var(--accent2);}
+.slot-btn.selected .slot-avail{color:var(--accent2);}
 .form-group{margin-bottom:16px;}
 .form-label{font-size:11px;font-weight:500;letter-spacing:.08em;color:var(--text2);margin-bottom:6px;display:block;text-transform:uppercase;font-family:'DM Mono',monospace;}
 .form-input{width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);padding:10px 14px;font-size:14px;color:var(--text);font-family:'Sora',sans-serif;transition:border .15s;}
 .form-input:focus{outline:none;border-color:var(--accent);}
+.form-input.error{border-color:var(--red);}
 .btn{background:none;border:1px solid var(--border2);color:var(--text);border-radius:var(--radius);padding:10px 20px;font-size:14px;font-family:'Sora',sans-serif;cursor:pointer;transition:all .15s;}
 .btn:hover{background:var(--bg3);border-color:var(--accent);color:var(--accent2);}
 .btn-primary{background:var(--accent);border-color:var(--accent);color:white;width:100%;padding:14px;}
 .btn-primary:hover{background:var(--accent2);border-color:var(--accent2);color:var(--bg);}
 .btn-primary:disabled{opacity:.4;cursor:not-allowed;}
+.btn-danger{border-color:var(--red);color:var(--red);width:100%;padding:14px;}
+.btn-danger:hover{background:var(--red-bg);}
 .sec-title{font-size:18px;font-weight:600;margin-bottom:6px;}
 .sec-sub{font-size:13px;color:var(--text2);margin-bottom:20px;line-height:1.6;}
 .back-btn{background:none;border:none;color:var(--text3);cursor:pointer;font-size:13px;margin-bottom:20px;padding:0;display:flex;align-items:center;gap:6px;}
@@ -51,7 +54,7 @@ body{font-family:'Sora',sans-serif;background:var(--bg);color:var(--text);min-he
 .confirm-icon{font-size:48px;margin-bottom:16px;}
 .confirm-title{font-size:22px;font-weight:600;color:var(--green);margin-bottom:10px;}
 .confirm-detail{font-size:14px;color:var(--text2);line-height:1.8;}
-.confirm-ref{font-family:'DM Mono',monospace;font-size:12px;color:var(--text3);margin-top:14px;padding:8px 16px;background:rgba(0,0,0,.3);border-radius:var(--radius);display:inline-block;}
+.confirm-ref{font-family:'DM Mono',monospace;font-size:13px;color:var(--accent2);margin-top:14px;padding:10px 20px;background:rgba(0,0,0,.3);border-radius:var(--radius);display:inline-block;}
 .summary-bar{background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:12px 16px;margin-bottom:20px;display:flex;gap:16px;flex-wrap:wrap;}
 .summary-item{font-size:12px;color:var(--text2);}
 .summary-item strong{color:var(--text);}
@@ -63,28 +66,34 @@ body{font-family:'Sora',sans-serif;background:var(--bg);color:var(--text);min-he
 .toast{position:fixed;bottom:24px;right:24px;background:var(--bg2);border:1px solid var(--border2);border-radius:var(--radius-lg);padding:12px 18px;font-size:13px;z-index:300;animation:slideUp .2s ease;}
 @keyframes slideUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
 .toast.error{border-color:var(--red);color:var(--red);}
+.toast.success{border-color:var(--green);color:var(--green);}
 ::-webkit-scrollbar{width:6px;}
 ::-webkit-scrollbar-track{background:transparent;}
 ::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px;}
-.loading{text-align:center;padding:40px;color:var(--text3);font-size:13px;}
-.realtime-badge{display:inline-flex;align-items:center;gap:5px;font-size:10px;color:var(--green);font-family:'DM Mono',monospace;margin-left:10px;}
+.loading{text-align:center;padding:60px;color:var(--text3);}
+.rt-badge{display:inline-flex;align-items:center;gap:5px;font-size:10px;color:var(--green);font-family:'DM Mono',monospace;margin-left:10px;}
 .rt-dot{width:6px;height:6px;border-radius:50%;background:var(--green);animation:pulse 2s infinite;}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.pin-box{background:var(--bg2);border:1px solid var(--border2);border-radius:var(--radius-lg);padding:32px;text-align:center;max-width:360px;margin:0 auto;}
+.manage-box{background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius-lg);padding:20px;margin-top:24px;}
+.manage-title{font-size:13px;font-weight:600;margin-bottom:4px;}
+.manage-sub{font-size:12px;color:var(--text3);margin-bottom:14px;}
+.booking-found-box{background:var(--amber-bg);border:1px solid var(--amber);border-radius:var(--radius);padding:14px 16px;margin-bottom:16px;}
+.booking-found-title{font-size:12px;color:var(--amber);font-weight:500;margin-bottom:4px;}
+.booking-found-detail{font-size:13px;}
 </style>
 </head>
 <body>
-
 <div class="header">
   <div class="logo">// prenota un incontro</div>
-  <div class="tagline">Seleziona la tua azienda e scegli uno slot disponibile</div>
+  <div class="tagline">Scegli uno slot disponibile</div>
 </div>
-
 <div class="main" id="main"><div class="loading">Caricamento...</div></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
-import { getFirestore, collection, doc, setDoc, getDoc, getDocs, onSnapshot, query, where }
+import { getFirestore, collection, doc, setDoc, getDoc, getDocs, deleteDoc, onSnapshot, query, where }
   from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 
 const firebaseConfig = {
@@ -95,209 +104,302 @@ const firebaseConfig = {
   messagingSenderId: "651795993983",
   appId: "1:651795993983:web:5168157edeecd398a7f64a"
 };
-
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-const DAYS_IT = ['','Lunedì','Martedì','Mercoledì','Giovedì','Venerdì','Sabato','Domenica'];
-const MONTHS_IT = ['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
+const DAYS_IT=['','Lunedì','Martedì','Mercoledì','Giovedì','Venerdì','Sabato','Domenica'];
+const MONTHS_IT=['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
 
-const bk = {
-  step: 1,
-  companies: [],
-  slots: {},
-  config: {},
-  selectedCo: null,
-  selectedSlotKey: null,
-  weekOffset: 0,
-  unsubSlots: null,
-  confirmData: null
+// ── STATE ─────────────────────────────────────────────────────────────────
+const bk={
+  step:1, // 1=company|pin, 2=slot, 3=form, 4=confirm
+  companies:[], slots:{}, config:{},
+  selectedCo:null, selectedSlotKey:null,
+  weekOffset:0, minWeekOffset:0,
+  unsubSlots:null, confirmData:null,
+  pinVerified:false
 };
 
-function uid() { return Date.now().toString(36)+Math.random().toString(36).slice(2,6); }
-function toDateStr(d) { return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,6); }
+function toDateStr(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
 
-// ── LOAD DATA ─────────────────────────────────────────────────────────────
-async function init() {
+// parse URL params
+const urlParams = new URLSearchParams(window.location.search);
+const urlCoId = urlParams.get('co');
+const urlPin = urlParams.get('pin');
+
+// ── INIT ──────────────────────────────────────────────────────────────────
+async function init(){
   const [coSnap, cfgSnap] = await Promise.all([
-    getDocs(collection(db, 'companies')),
-    getDoc(doc(db, 'config', 'emailjs'))
+    getDocs(collection(db,'companies')),
+    getDoc(doc(db,'config','emailjs'))
   ]);
-  bk.companies = coSnap.docs.map(d => ({id:d.id,...d.data()})).sort((a,b)=>a.name.localeCompare(b.name));
-  if (cfgSnap.exists()) {
-    bk.config = cfgSnap.data();
-    if (bk.config.pubkey) emailjs.init(bk.config.pubkey);
+  bk.companies = coSnap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>a.name.localeCompare(b.name));
+  if(cfgSnap.exists()){ bk.config=cfgSnap.data(); if(bk.config.pubkey) emailjs.init(bk.config.pubkey); }
+
+  // direct link: preselect company
+  if(urlCoId){
+    const co = bk.companies.find(c=>c.id===urlCoId);
+    if(co){
+      bk.selectedCo=co;
+      // check PIN
+      if(co.pin && urlPin !== co.pin){
+        bk.step='pin';
+        bk.pinVerified=false;
+      } else {
+        bk.pinVerified=true;
+        bk.step=2;
+        autoWeekOffset(co);
+        subscribeSlots(co.id);
+      }
+    }
   }
   render();
 }
 
+function autoWeekOffset(co){
+  bk.weekOffset=0; bk.expired=false;
+  let found=false;
+  for(let w=0;w<52;w++){
+    if(getAvailableDates(co,w).length>0){ bk.weekOffset=w; found=true; break; }
+    // if all weeks exceed endDate, stop
+    if(co.endDate){
+      const now=new Date(), todayDow=now.getDay()||7;
+      const monday=new Date(now); monday.setDate(now.getDate()-todayDow+1+w*7);
+      if(toDateStr(monday) > co.endDate){ break; }
+    }
+  }
+  if(!found) bk.expired=true;
+  bk.minWeekOffset=bk.weekOffset;
+}
+
 // ── REALTIME SLOTS ────────────────────────────────────────────────────────
-function subscribeSlots(coId) {
-  if (bk.unsubSlots) { bk.unsubSlots(); bk.unsubSlots = null; }
-  const q = query(collection(db, 'slots'), where('coId','==',coId));
-  bk.unsubSlots = onSnapshot(q, snap => {
-    snap.docChanges().forEach(change => {
-      if (change.type==='removed') delete bk.slots[change.doc.id];
-      else bk.slots[change.doc.id] = change.doc.data();
+function subscribeSlots(coId){
+  if(bk.unsubSlots){ bk.unsubSlots(); bk.unsubSlots=null; }
+  bk.slots={};
+  const q=query(collection(db,'slots'),where('coId','==',coId));
+  bk.unsubSlots=onSnapshot(q,snap=>{
+    let changed=false;
+    snap.docChanges().forEach(ch=>{
+      changed=true;
+      if(ch.type==='removed') delete bk.slots[ch.doc.id];
+      else bk.slots[ch.doc.id]=ch.doc.data();
     });
-    if (bk.step === 2) {
-      const el = document.getElementById('step-content');
-      if (el) renderStep2(el);
+    if(!changed)return;
+    if(bk.step===2){
+      setTimeout(()=>{
+        const el=document.getElementById('step-content');
+        if(el) renderStep2(el);
+      },50);
     }
   });
 }
 
-// ── RENDER ────────────────────────────────────────────────────────────────
-function render() {
-  const main = document.getElementById('main');
-  const stepLabels = ['Azienda','Slot','Dati','Conferma'];
-  let html = '<div class="steps">';
-  stepLabels.forEach((lbl,i) => {
-    const n=i+1, cls=n<bk.step?'done':n===bk.step?'active':'', icon=n<bk.step?'✓':n;
-    html += `<div class="step"><div class="step-circle ${cls}">${icon}</div><div class="step-label ${cls}">${lbl}</div></div>`;
-    if (i<stepLabels.length-1) html += `<div class="step-connector ${n<bk.step?'done':''}"></div>`;
-  });
-  html += '</div>';
-  main.innerHTML = html;
-  const content = document.createElement('div');
-  content.id = 'step-content';
-  if (bk.step===1) renderStep1(content);
-  else if (bk.step===2) renderStep2(content);
-  else if (bk.step===3) renderStep3(content);
-  else renderStep4(content);
-  main.appendChild(content);
-}
-
-function renderStep1(el) {
-  el.innerHTML = `<div class="sec-title">Seleziona la tua azienda</div>
-    <div class="sec-sub">Scegli l'azienda per cui vuoi prenotare un incontro.</div>`;
-  if (!bk.companies.length) {
-    el.innerHTML += '<div style="text-align:center;padding:40px;color:var(--text3);">Nessuna azienda disponibile.</div>';
-    return;
-  }
-  bk.companies.forEach(co => {
-    const div = document.createElement('div');
-    div.className = 'card';
-    div.innerHTML = `<div style="display:flex;align-items:center;gap:12px;">
-      <div style="width:12px;height:12px;border-radius:50%;background:${co.color};flex-shrink:0;"></div>
-      <div><div class="card-title">${co.name}</div>
-      <div class="card-sub">${DAYS_IT[co.day]} · ${co.duration} min · ${co.startTime}–${co.endTime}</div></div>
-    </div>`;
-    div.onclick = () => {
-      bk.selectedCo = co; bk.slots = {}; bk.step = 2; bk.weekOffset = 0;
-      subscribeSlots(co.id);
-      render();
-    };
-    el.appendChild(div);
-  });
-}
-
-function getAvailableDates(co, weekOffset) {
-  const now = new Date();
-  const todayDow = now.getDay()||7;
-  const monday = new Date(now); monday.setDate(now.getDate()-todayDow+1+weekOffset*7);
-  const dates = [];
-  for (let i=0;i<7;i++) {
-    const d = new Date(monday); d.setDate(monday.getDate()+i);
-    if ((d.getDay()||7)===co.day && toDateStr(d)>=toDateStr(now)) dates.push(d);
+// ── SLOT GENERATION ───────────────────────────────────────────────────────
+function getAvailableDates(co, weekOffset){
+  const now=new Date(), todayDow=now.getDay()||7;
+  const monday=new Date(now); monday.setDate(now.getDate()-todayDow+1+weekOffset*7);
+  const days=(co.schedules||[]).map(s=>s.day);
+  const todayStr=toDateStr(now);
+  const dates=[];
+  for(let i=0;i<7;i++){
+    const d=new Date(monday); d.setDate(monday.getDate()+i);
+    const ds=toDateStr(d);
+    if(!days.includes(d.getDay()||7)) continue;
+    if(ds < todayStr) continue;
+    if(co.startDate && ds < co.startDate) continue;
+    if(co.endDate && ds > co.endDate) continue;
+    dates.push(d);
   }
   return dates;
 }
 
-function generateSlots(co, date) {
-  const dateStr = toDateStr(date);
-  const [sh,sm] = co.startTime.split(':').map(Number);
-  const [eh,em] = co.endTime.split(':').map(Number);
-  const slots = [];
-  for (let m=sh*60+sm; m+co.duration<=eh*60+em; m+=co.duration) {
-    const hh=String(Math.floor(m/60)).padStart(2,'0'), mm=String(m%60).padStart(2,'0');
-    const key = co.id+'_'+dateStr+'_'+hh+':'+mm;
-    const data = bk.slots[key]||{};
-    if (data.blocked) continue;
-    slots.push({key, time:hh+':'+mm, dateStr, booked:!!data.booked});
+function generateSlots(co, date){
+  const dateStr=toDateStr(date);
+  const dayNum=date.getDay()||7;
+  const sched=(co.schedules||[]).find(s=>s.day===dayNum);
+  if(!sched)return[];
+  const slots=[];
+  for(const range of sched.ranges){
+    const [sh,sm]=range.start.split(':').map(Number);
+    const [eh,em]=range.end.split(':').map(Number);
+    for(let m=sh*60+sm; m+co.duration<=eh*60+em; m+=co.duration){
+      const hh=String(Math.floor(m/60)).padStart(2,'0'), mm=String(m%60).padStart(2,'0');
+      const key=co.id+'_'+dateStr+'_'+hh+':'+mm;
+      const data=bk.slots[key]||{};
+      if(data.blocked)continue;
+      slots.push({key, time:hh+':'+mm, dateStr, booked:!!data.booked, bookerName:data.bookerName||''});
+    }
   }
   return slots;
 }
 
-function renderStep2(el) {
-  const co = bk.selectedCo;
-  const dates = getAvailableDates(co, bk.weekOffset);
-  const now = new Date();
-  const todayDow = now.getDay()||7;
-  const monday = new Date(now); monday.setDate(now.getDate()-todayDow+1+bk.weekOffset*7);
-  const sunday = new Date(monday); sunday.setDate(monday.getDate()+6);
-  const weekLabel = monday.getDate()+' '+MONTHS_IT[monday.getMonth()].slice(0,3)+' – '+sunday.getDate()+' '+MONTHS_IT[sunday.getMonth()].slice(0,3);
+// ── RENDER ────────────────────────────────────────────────────────────────
+function render(){
+  const main=document.getElementById('main');
+  if(bk.step==='pin'){ renderPinScreen(main); return; }
 
-  el.innerHTML = `
-    <button class="back-btn" id="back-step1">← Cambia azienda</button>
-    <div class="sec-title">Scegli uno slot <span class="realtime-badge"><span class="rt-dot"></span>live</span></div>
+  const stepLabels=['Azienda','Slot','Dati','Conferma'];
+  let html='<div class="steps">';
+  stepLabels.forEach((lbl,i)=>{
+    const n=i+1, cls=n<bk.step?'done':n===bk.step?'active':'', icon=n<bk.step?'✓':n;
+    html+=`<div class="step"><div class="step-circle ${cls}">${icon}</div><div class="step-label ${cls}">${lbl}</div></div>`;
+    if(i<stepLabels.length-1) html+=`<div class="step-connector ${n<bk.step?'done':''}"></div>`;
+  });
+  html+='</div>';
+  main.innerHTML=html;
+  const content=document.createElement('div'); content.id='step-content';
+  if(bk.step===1) renderStep1(content);
+  else if(bk.step===2) renderStep2(content);
+  else if(bk.step===3) renderStep3(content);
+  else renderStep4(content);
+  main.appendChild(content);
+}
+
+// PIN SCREEN
+function renderPinScreen(main){
+  const co=bk.selectedCo;
+  main.innerHTML=`
+    <div style="display:flex;align-items:center;justify-content:center;min-height:60vh;">
+      <div class="pin-box">
+        <div style="font-size:32px;margin-bottom:12px;">🔒</div>
+        <div style="font-size:18px;font-weight:600;margin-bottom:6px;">${co.name}</div>
+        <div style="font-size:13px;color:var(--text2);margin-bottom:24px;">Inserisci il codice di accesso fornito dalla tua azienda.</div>
+        <div class="form-group" style="text-align:left;">
+          <label class="form-label">Codice accesso</label>
+          <input type="text" class="form-input" id="pin-input" placeholder="Es. ACME2024" autocomplete="off" />
+        </div>
+        <button class="btn btn-primary" id="pin-btn">Accedi</button>
+        <div id="pin-error" style="color:var(--red);font-size:12px;margin-top:12px;display:none;">Codice errato.</div>
+      </div>
+    </div>`;
+  const input=main.querySelector('#pin-input');
+  const btn=main.querySelector('#pin-btn');
+  const err=main.querySelector('#pin-error');
+  const checkPin=()=>{
+    if(input.value.trim()===co.pin){
+      bk.pinVerified=true; bk.step=2;
+      autoWeekOffset(co); subscribeSlots(co.id); render();
+    } else {
+      err.style.display='block'; input.value=''; input.focus();
+    }
+  };
+  btn.onclick=checkPin;
+  input.addEventListener('keydown',e=>{ if(e.key==='Enter') checkPin(); });
+  setTimeout(()=>input.focus(),50);
+}
+
+// STEP 1: company list (only shown when no ?co= param)
+function renderStep1(el){
+  el.innerHTML=`<div class="sec-title">Seleziona la tua azienda</div>
+    <div class="sec-sub">Scegli l'azienda per cui vuoi prenotare.</div>`;
+  // Only show companies without PIN (or let user select and then ask PIN)
+  bk.companies.forEach(co=>{
+    const div=document.createElement('div'); div.className='card';
+    const days=(co.schedules||[]).map(s=>DAYS_IT[s.day]).join(', ');
+    div.innerHTML=`<div style="display:flex;align-items:center;gap:12px;">
+      <div style="width:12px;height:12px;border-radius:50%;background:${co.color};flex-shrink:0;"></div>
+      <div><div class="card-title">${co.name}</div>
+      <div class="card-sub">${days} · ${co.duration} min${co.pin?' · 🔒 Codice richiesto':''}</div></div>
+    </div>`;
+    div.onclick=()=>{
+      bk.selectedCo=co; bk.slots={};
+      if(co.pin){
+        bk.step='pin'; render();
+      } else {
+        bk.step=2; autoWeekOffset(co);
+        render(); subscribeSlots(co.id);
+      }
+    };
+    el.appendChild(div);
+  });
+
+  // Manage booking section
+  el.appendChild(buildManageSection());
+}
+
+// STEP 2: slot picker
+function renderStep2(el){
+  const co=bk.selectedCo;
+  const dates=getAvailableDates(co,bk.weekOffset);
+  const now=new Date(), todayDow=now.getDay()||7;
+  const monday=new Date(now); monday.setDate(now.getDate()-todayDow+1+bk.weekOffset*7);
+  const sunday=new Date(monday); sunday.setDate(monday.getDate()+6);
+  const weekLabel=monday.getDate()+' '+MONTHS_IT[monday.getMonth()].slice(0,3)+' – '+sunday.getDate()+' '+MONTHS_IT[sunday.getMonth()].slice(0,3);
+  const days=(co.schedules||[]).map(s=>DAYS_IT[s.day]).join(', ');
+
+  el.innerHTML=`
+    ${!urlCoId?'<button class="back-btn" id="back-s1">← Cambia azienda</button>':''}
+    <div class="sec-title">Scegli uno slot <span class="rt-badge"><span class="rt-dot"></span>live</span></div>
     <div class="summary-bar">
       <div class="summary-item"><strong>${co.name}</strong></div>
-      <div class="summary-item">Ogni <strong>${DAYS_IT[co.day]}</strong></div>
+      <div class="summary-item">${days}</div>
       <div class="summary-item">Slot da <strong>${co.duration} min</strong></div>
     </div>
     <div class="week-nav">
-      <button class="nav-btn" id="nav-prev" ${bk.weekOffset<=0?'disabled':''}>‹ Prec</button>
+      <button class="nav-btn" id="nav-prev" ${bk.weekOffset<=bk.minWeekOffset?'disabled':''}>‹ Prec</button>
       <span class="week-label-sm">${weekLabel}</span>
       <button class="nav-btn" id="nav-next">Succ ›</button>
     </div>
     <div id="slots-area"></div>
-    <div id="continue-btn-wrap"></div>`;
+    <div id="continue-wrap"></div>`;
 
-  el.querySelector('#back-step1').onclick = () => { bk.step=1; if(bk.unsubSlots){bk.unsubSlots();bk.unsubSlots=null;} render(); };
-  el.querySelector('#nav-prev').onclick = () => { bk.weekOffset--; renderStep2(el); };
-  el.querySelector('#nav-next').onclick = () => { bk.weekOffset++; renderStep2(el); };
+  if(!urlCoId){ const b=el.querySelector('#back-s1'); if(b) b.onclick=()=>{ bk.step=1; if(bk.unsubSlots){bk.unsubSlots();bk.unsubSlots=null;} render(); }; }
+  const prevBtn=el.querySelector('#nav-prev'), nextBtn=el.querySelector('#nav-next');
+  if(prevBtn) prevBtn.onclick=()=>{ bk.weekOffset--; renderStep2(el); };
+  if(nextBtn) nextBtn.onclick=()=>{ bk.weekOffset++; renderStep2(el); };
 
-  const area = el.querySelector('#slots-area');
-  if (!dates.length) {
-    area.innerHTML = '<div style="text-align:center;padding:30px;color:var(--text3);font-size:13px;">Nessuna data questa settimana. Prova quella successiva.</div>';
+  const area=el.querySelector('#slots-area');
+  if(bk.expired){
+    area.innerHTML=`<div style="text-align:center;padding:40px 20px;">
+      <div style="font-size:32px;margin-bottom:12px;">📅</div>
+      <div style="font-size:15px;font-weight:600;margin-bottom:8px;">Disponibilità terminata</div>
+      <div style="font-size:13px;color:var(--text3);">Non ci sono più slot disponibili per questa azienda.<br>Contatta il consulente per informazioni.</div>
+    </div>`;
+  } else if(!dates.length){
+    area.innerHTML='<div style="text-align:center;padding:30px;color:var(--text3);font-size:13px;">Nessuna data questa settimana. Prova quella successiva.</div>';
   } else {
-    dates.forEach(date => {
-      const slots = generateSlots(co, date);
-      const free = slots.filter(s=>!s.booked).length;
-      const sec = document.createElement('div');
-      sec.style.marginBottom = '24px';
-      sec.innerHTML = `<div style="font-size:13px;font-weight:500;color:var(--text2);margin-bottom:12px;">
+    dates.forEach(date=>{
+      const slots=generateSlots(co,date);
+      const free=slots.filter(s=>!s.booked).length;
+      const sec=document.createElement('div'); sec.style.marginBottom='24px';
+      sec.innerHTML=`<div style="font-size:13px;font-weight:500;color:var(--text2);margin-bottom:12px;">
         ${DAYS_IT[date.getDay()||7]} <strong style="color:var(--text)">${date.getDate()} ${MONTHS_IT[date.getMonth()]} ${date.getFullYear()}</strong>
         <span style="font-size:11px;color:var(--text3);margin-left:8px;">${free} liberi</span>
       </div><div class="slot-grid">${
-        slots.map(s => {
-          const sel = bk.selectedSlotKey===s.key;
-          return `<div class="slot-btn${s.booked?' booked':sel?' selected':''}" data-key="${s.key}" ${s.booked?'':'style="cursor:pointer"'}>
-            <div class="slot-time-big">${s.time}</div>
-            <div class="slot-avail">${s.booked?'Occupato':'Disponibile'}</div>
-          </div>`;
-        }).join('')
+        slots.map(s=>`<div class="slot-btn${s.booked?' booked':bk.selectedSlotKey===s.key?' selected':''}" data-key="${s.key}" data-booked="${s.booked}">
+          <div class="slot-time-big">${s.time}</div>
+          <div class="slot-avail">${s.booked?'Occupato':'Disponibile'}</div>
+        </div>`).join('')
       }</div>`;
       area.appendChild(sec);
     });
-    area.querySelectorAll('.slot-btn:not(.booked)').forEach(btn => {
-      btn.addEventListener('click', () => {
-        bk.selectedSlotKey = btn.dataset.key;
-        area.querySelectorAll('.slot-btn').forEach(b => b.classList.remove('selected'));
+    area.querySelectorAll('.slot-btn:not([data-booked="true"])').forEach(btn=>{
+      btn.addEventListener('click',()=>{
+        bk.selectedSlotKey=btn.dataset.key;
+        area.querySelectorAll('.slot-btn').forEach(b=>b.classList.remove('selected'));
         btn.classList.add('selected');
-        const wrap = el.querySelector('#continue-btn-wrap');
-        if (!wrap) return;
-        wrap.innerHTML = `<button class="btn btn-primary" id="btn-continue-inner">Continua →</button>`;
-        wrap.querySelector('#btn-continue-inner').onclick = () => { bk.step=3; render(); };
+        const wrap=el.querySelector('#continue-wrap');
+        if(wrap){ wrap.innerHTML=`<button class="btn btn-primary" id="btn-cont">Continua →</button>`; wrap.querySelector('#btn-cont').onclick=()=>{ bk.step=3; render(); }; }
       });
     });
-  }
-
-  if (bk.selectedSlotKey) {
-    const wrap = el.querySelector('#continue-btn-wrap');
-    if (wrap && !wrap.innerHTML.trim()) {
-      wrap.innerHTML = `<button class="btn btn-primary" id="btn-continue-inner2">Continua →</button>`;
-      wrap.querySelector('#btn-continue-inner2').onclick = () => { bk.step=3; render(); };
+    if(bk.selectedSlotKey){
+      const wrap=el.querySelector('#continue-wrap');
+      if(wrap&&!wrap.innerHTML.trim()){ wrap.innerHTML=`<button class="btn btn-primary" id="btn-cont2">Continua →</button>`; wrap.querySelector('#btn-cont2').onclick=()=>{ bk.step=3; render(); }; }
     }
   }
+
+  // manage section at bottom
+  const manage=buildManageSection();
+  el.appendChild(manage);
 }
 
-function renderStep3(el) {
-  const parts = bk.selectedSlotKey.split('_');
+// STEP 3: personal data
+function renderStep3(el){
+  const parts=bk.selectedSlotKey.split('_');
   const dateStr=parts[1], time=parts[2];
-  el.innerHTML = `
-    <button class="back-btn" id="back-step2">← Torna agli slot</button>
+  el.innerHTML=`
+    <button class="back-btn" id="back-s2">← Torna agli slot</button>
     <div class="sec-title">I tuoi dati</div>
     <div class="summary-bar">
       <div class="summary-item"><strong>${bk.selectedCo.name}</strong></div>
@@ -306,100 +408,128 @@ function renderStep3(el) {
     </div>
     <div class="form-group">
       <label class="form-label">Nome</label>
-      <input type="text" class="form-input" id="bk-firstname" placeholder="Mario" autocomplete="given-name" />
+      <input type="text" class="form-input" id="bk-fn" placeholder="Mario" autocomplete="given-name" />
     </div>
     <div class="form-group">
       <label class="form-label">Cognome</label>
-      <input type="text" class="form-input" id="bk-lastname" placeholder="Rossi" autocomplete="family-name" />
+      <input type="text" class="form-input" id="bk-ln" placeholder="Rossi" autocomplete="family-name" />
     </div>
-    <button class="btn btn-primary" id="bk-confirm-btn">Conferma prenotazione</button>`;
-
-  el.querySelector('#back-step2').onclick = () => { bk.step=2; render(); };
-  el.querySelector('#bk-confirm-btn').onclick = confirmBooking;
-  el.querySelector('#bk-firstname').addEventListener('keydown', e => { if(e.key==='Enter') el.querySelector('#bk-lastname').focus(); });
-  el.querySelector('#bk-lastname').addEventListener('keydown', e => { if(e.key==='Enter') confirmBooking(); });
-  setTimeout(() => { const f=el.querySelector('#bk-firstname'); if(f) f.focus(); }, 50);
+    <button class="btn btn-primary" id="bk-confirm">Conferma prenotazione</button>`;
+  el.querySelector('#back-s2').onclick=()=>{ bk.step=2; render(); };
+  el.querySelector('#bk-confirm').onclick=confirmBooking;
+  el.querySelector('#bk-fn').addEventListener('keydown',e=>{ if(e.key==='Enter') el.querySelector('#bk-ln').focus(); });
+  el.querySelector('#bk-ln').addEventListener('keydown',e=>{ if(e.key==='Enter') confirmBooking(); });
+  setTimeout(()=>{ const f=el.querySelector('#bk-fn'); if(f)f.focus(); },50);
 }
 
-async function confirmBooking() {
-  const fn = document.getElementById('bk-firstname').value.trim();
-  const ln = document.getElementById('bk-lastname').value.trim();
-  if (!fn||!ln) { showToast('Inserisci nome e cognome','error'); return; }
-  const btn = document.getElementById('bk-confirm-btn');
-  btn.disabled=true; btn.textContent='Prenotazione in corso...';
-
-  const parts = bk.selectedSlotKey.split('_');
-  const dateStr=parts[1], time=parts[2];
-  const fullName = fn+' '+ln;
-  const ref = uid().toUpperCase();
-  const co = bk.selectedCo;
-
-  // check not taken
-  const current = bk.slots[bk.selectedSlotKey];
-  if (current?.booked) {
-    showToast('Slot già prenotato, scegline un altro','error');
-    bk.step=2; render(); return;
-  }
-
-  // write to Firestore
-  const slotData = {
-    key: bk.selectedSlotKey, coId: co.id,
-    dateStr, time, booked:true, bookerName:fullName,
-    bookedAt: new Date().toISOString(), ref, blocked:false
-  };
-  try {
-    await setDoc(doc(db, 'slots', bk.selectedSlotKey), slotData);
-    bk.slots[bk.selectedSlotKey] = slotData;
-  } catch(e) {
-    showToast('Errore di connessione, riprova','error');
-    btn.disabled=false; btn.textContent='Conferma prenotazione'; return;
-  }
-
-  // send emails
-  const cfg = bk.config;
-  let emailOk = false;
-  if (cfg.pubkey && cfg.serviceId) {
-    const params = { company_name:co.name, booking_date:dateStr, booking_time:time, duration:co.duration, booker_name:fullName, ref_code:ref, consultant_email:cfg.consultantEmail||'' };
-    try {
-      const promises = [];
-      if (cfg.tplClient && co.email) promises.push(emailjs.send(cfg.serviceId, cfg.tplClient, {...params, to_email:co.email, to_name:co.name}));
-      if (cfg.tplConsultant && cfg.consultantEmail) promises.push(emailjs.send(cfg.serviceId, cfg.tplConsultant, {...params, to_email:cfg.consultantEmail, to_name:'Consulente'}));
-      await Promise.all(promises);
-      emailOk = true;
-    } catch(e) { console.warn('EmailJS:', e); }
-  }
-
-  bk.confirmData = { fullName, dateStr, time, ref, emailOk, coName:co.name, duration:co.duration };
-  bk.step = 4;
-  render();
-}
-
-function renderStep4(el) {
-  const d = bk.confirmData;
-  el.innerHTML = `
+// STEP 4: confirmation
+function renderStep4(el){
+  const d=bk.confirmData;
+  el.innerHTML=`
     <div class="confirm-box">
       <div class="confirm-icon">✅</div>
       <div class="confirm-title">Prenotazione confermata!</div>
       <div class="confirm-detail">
-        <strong>${d.fullName}</strong><br>
-        ${d.coName}<br><br>
-        📅 ${d.dateStr}<br>
-        🕐 ${d.time} · ${d.duration} minuti
+        <strong>${d.fullName}</strong><br>${d.coName}<br><br>
+        📅 ${d.dateStr} · 🕐 ${d.time} · ⏱ ${d.duration} min
       </div>
-      ${d.emailOk ? `<div style="margin-top:14px;font-size:12px;color:var(--green);">✓ Email di conferma inviata</div>` : ''}
-      <div class="confirm-ref">Ref: ${d.ref}</div>
+      ${d.emailOk?`<div style="margin-top:12px;font-size:12px;color:var(--green);">✓ Email di conferma inviata</div>`:''}
+      <div class="confirm-ref">Codice riferimento: <strong>${d.ref}</strong><br><span style="font-size:11px;color:var(--text3);">Conservalo per modificare la prenotazione</span></div>
     </div>
     <button class="btn" style="width:100%;margin-top:16px;" id="btn-new">Effettua un'altra prenotazione</button>`;
-  el.querySelector('#btn-new').onclick = () => {
-    bk.step=1; bk.selectedCo=null; bk.selectedSlotKey=null; bk.weekOffset=0; bk.confirmData=null;
-    if(bk.unsubSlots){bk.unsubSlots();bk.unsubSlots=null;}
-    render();
-  };
+  el.querySelector('#btn-new').onclick=()=>{ bk.step=urlCoId?2:1; bk.selectedSlotKey=null; bk.confirmData=null; if(!urlCoId&&bk.unsubSlots){bk.unsubSlots();bk.unsubSlots=null;} if(urlCoId) autoWeekOffset(bk.selectedCo); render(); };
 }
 
-function showToast(msg, type='') {
+// ── MANAGE BOOKING (cancella e riprenota) ─────────────────────────────────
+function buildManageSection(){
+  const div=document.createElement('div'); div.className='manage-box';
+  div.innerHTML=`
+    <div class="manage-title">Hai già una prenotazione?</div>
+    <div class="manage-sub">Inserisci il codice di riferimento per cancellarla e prenotarne una nuova.</div>
+    <div class="form-group" style="margin-bottom:10px;">
+      <input type="text" class="form-input" id="manage-ref" placeholder="Es. A1B2C3D4" style="font-family:'DM Mono',monospace;text-transform:uppercase;" />
+    </div>
+    <button class="btn" style="width:100%;padding:10px;" id="manage-find-btn">Cerca prenotazione</button>
+    <div id="manage-result" style="margin-top:12px;"></div>`;
+  const input=div.querySelector('#manage-ref');
+  const btn=div.querySelector('#manage-find-btn');
+  const result=div.querySelector('#manage-result');
+  btn.onclick=async()=>{
+    const ref=input.value.trim().toUpperCase();
+    if(!ref){ showToast('Inserisci il codice','error'); return; }
+    btn.disabled=true; btn.textContent='Ricerca...';
+    // search across all slots for this ref
+    const snap=await getDocs(query(collection(db,'slots'),where('ref','==',ref)));
+    btn.disabled=false; btn.textContent='Cerca prenotazione';
+    if(snap.empty){ result.innerHTML=`<div style="font-size:12px;color:var(--red);text-align:center;">Nessuna prenotazione trovata con questo codice.</div>`; return; }
+    const slotDoc=snap.docs[0]; const slotData=slotDoc.data();
+    result.innerHTML=`
+      <div class="booking-found-box">
+        <div class="booking-found-title">Prenotazione trovata</div>
+        <div class="booking-found-detail"><strong>${slotData.bookerName}</strong><br>${slotData.dateStr} alle ${slotData.time}</div>
+      </div>
+      <button class="btn btn-danger" id="cancel-booking-btn">Cancella questa prenotazione</button>`;
+    result.querySelector('#cancel-booking-btn').onclick=async()=>{
+      if(!confirm('Confermi la cancellazione? Potrai prenotare un nuovo slot.'))return;
+      await deleteDoc(slotDoc.ref);
+      delete bk.slots[slotDoc.id];
+      showToast('Prenotazione cancellata','success');
+      result.innerHTML=`<div style="font-size:12px;color:var(--green);text-align:center;">✓ Cancellata. Ora puoi prenotare un nuovo slot.</div>`;
+      input.value='';
+      // if we know the company, refresh slots
+      if(bk.selectedCo&&slotData.coId===bk.selectedCo.id){
+        const el=document.getElementById('step-content');
+        if(el&&bk.step===2) renderStep2(el);
+      }
+    };
+  };
+  input.addEventListener('keydown',e=>{ if(e.key==='Enter') btn.click(); });
+  return div;
+}
+
+// ── CONFIRM BOOKING ───────────────────────────────────────────────────────
+async function confirmBooking(){
+  const el=document.getElementById('step-content');
+  const fn=el.querySelector('#bk-fn').value.trim();
+  const ln=el.querySelector('#bk-ln').value.trim();
+  if(!fn||!ln){ showToast('Inserisci nome e cognome','error'); return; }
+  const btn=el.querySelector('#bk-confirm');
+  btn.disabled=true; btn.textContent='Prenotazione in corso...';
+
+  const parts=bk.selectedSlotKey.split('_');
+  const dateStr=parts[1], time=parts[2];
+  const fullName=fn+' '+ln;
+  const ref=uid().toUpperCase();
+  const co=bk.selectedCo;
+
+  const current=bk.slots[bk.selectedSlotKey];
+  if(current?.booked){ showToast('Slot già prenotato, scegline un altro','error'); bk.step=2; render(); return; }
+
+  const slotData={key:bk.selectedSlotKey,coId:co.id,dateStr,time,booked:true,bookerName:fullName,bookedAt:new Date().toISOString(),ref,blocked:false};
+  try{
+    await setDoc(doc(db,'slots',bk.selectedSlotKey),slotData);
+    bk.slots[bk.selectedSlotKey]=slotData;
+  }catch(e){ showToast('Errore di connessione, riprova','error'); btn.disabled=false; btn.textContent='Conferma prenotazione'; return; }
+
+  let emailOk=false;
+  const cfg=bk.config;
+  if(cfg.pubkey&&cfg.serviceId){
+    const params={company_name:co.name,booking_date:dateStr,booking_time:time,duration:co.duration,booker_name:fullName,ref_code:ref,consultant_email:cfg.consultantEmail||''};
+    try{
+      const promises=[];
+      if(cfg.tplClient&&co.email) promises.push(emailjs.send(cfg.serviceId,cfg.tplClient,{...params,to_email:co.email,to_name:co.name}));
+      if(cfg.tplConsultant&&cfg.consultantEmail) promises.push(emailjs.send(cfg.serviceId,cfg.tplConsultant,{...params,to_email:cfg.consultantEmail,to_name:'Consulente'}));
+      await Promise.all(promises); emailOk=true;
+    }catch(e){ console.warn('EmailJS:',e); }
+  }
+
+  bk.confirmData={fullName,dateStr,time,ref,emailOk,coName:co.name,duration:co.duration};
+  bk.step=4; render();
+}
+
+function showToast(msg,type=''){
   const t=document.createElement('div'); t.className='toast '+type; t.textContent=msg;
-  document.body.appendChild(t); setTimeout(()=>t.remove(),2800);
+  document.body.appendChild(t); setTimeout(()=>t.remove(),3000);
 }
 
 init();
