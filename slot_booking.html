@@ -140,7 +140,10 @@ function subscribeSlots(coId) {
       if (change.type==='removed') delete bk.slots[change.doc.id];
       else bk.slots[change.doc.id] = change.doc.data();
     });
-    if (bk.step === 2) renderStep2(document.getElementById('step-content'));
+    if (bk.step === 2) {
+      const el = document.getElementById('step-content');
+      if (el) renderStep2(el);
+    }
   });
 }
 
@@ -241,11 +244,11 @@ function renderStep2(el) {
     <div id="slots-area"></div>
     <div id="continue-btn-wrap"></div>`;
 
-  document.getElementById('back-step1').onclick = () => { bk.step=1; if(bk.unsubSlots){bk.unsubSlots();bk.unsubSlots=null;} render(); };
-  document.getElementById('nav-prev').onclick = () => { bk.weekOffset--; renderStep2(el); };
-  document.getElementById('nav-next').onclick = () => { bk.weekOffset++; renderStep2(el); };
+  el.querySelector('#back-step1').onclick = () => { bk.step=1; if(bk.unsubSlots){bk.unsubSlots();bk.unsubSlots=null;} render(); };
+  el.querySelector('#nav-prev').onclick = () => { bk.weekOffset--; renderStep2(el); };
+  el.querySelector('#nav-next').onclick = () => { bk.weekOffset++; renderStep2(el); };
 
-  const area = document.getElementById('slots-area');
+  const area = el.querySelector('#slots-area');
   if (!dates.length) {
     area.innerHTML = '<div style="text-align:center;padding:30px;color:var(--text3);font-size:13px;">Nessuna data questa settimana. Prova quella successiva.</div>';
   } else {
@@ -273,18 +276,19 @@ function renderStep2(el) {
         bk.selectedSlotKey = btn.dataset.key;
         area.querySelectorAll('.slot-btn').forEach(b => b.classList.remove('selected'));
         btn.classList.add('selected');
-        const wrap = document.getElementById('continue-btn-wrap');
-        wrap.innerHTML = `<button class="btn btn-primary" id="btn-continue">Continua →</button>`;
-        document.getElementById('btn-continue').onclick = () => { bk.step=3; render(); };
+        const wrap = el.querySelector('#continue-btn-wrap');
+        if (!wrap) return;
+        wrap.innerHTML = `<button class="btn btn-primary" id="btn-continue-inner">Continua →</button>`;
+        wrap.querySelector('#btn-continue-inner').onclick = () => { bk.step=3; render(); };
       });
     });
   }
 
   if (bk.selectedSlotKey) {
-    const wrap = document.getElementById('continue-btn-wrap');
-    if (!wrap.innerHTML) {
-      wrap.innerHTML = `<button class="btn btn-primary" id="btn-continue">Continua →</button>`;
-      document.getElementById('btn-continue').onclick = () => { bk.step=3; render(); };
+    const wrap = el.querySelector('#continue-btn-wrap');
+    if (wrap && !wrap.innerHTML.trim()) {
+      wrap.innerHTML = `<button class="btn btn-primary" id="btn-continue-inner2">Continua →</button>`;
+      wrap.querySelector('#btn-continue-inner2').onclick = () => { bk.step=3; render(); };
     }
   }
 }
@@ -310,11 +314,11 @@ function renderStep3(el) {
     </div>
     <button class="btn btn-primary" id="bk-confirm-btn">Conferma prenotazione</button>`;
 
-  document.getElementById('back-step2').onclick = () => { bk.step=2; render(); };
-  document.getElementById('bk-confirm-btn').onclick = confirmBooking;
-  document.getElementById('bk-firstname').addEventListener('keydown', e => { if(e.key==='Enter') document.getElementById('bk-lastname').focus(); });
-  document.getElementById('bk-lastname').addEventListener('keydown', e => { if(e.key==='Enter') confirmBooking(); });
-  setTimeout(() => document.getElementById('bk-firstname').focus(), 50);
+  el.querySelector('#back-step2').onclick = () => { bk.step=2; render(); };
+  el.querySelector('#bk-confirm-btn').onclick = confirmBooking;
+  el.querySelector('#bk-firstname').addEventListener('keydown', e => { if(e.key==='Enter') el.querySelector('#bk-lastname').focus(); });
+  el.querySelector('#bk-lastname').addEventListener('keydown', e => { if(e.key==='Enter') confirmBooking(); });
+  setTimeout(() => { const f=el.querySelector('#bk-firstname'); if(f) f.focus(); }, 50);
 }
 
 async function confirmBooking() {
@@ -386,7 +390,7 @@ function renderStep4(el) {
       <div class="confirm-ref">Ref: ${d.ref}</div>
     </div>
     <button class="btn" style="width:100%;margin-top:16px;" id="btn-new">Effettua un'altra prenotazione</button>`;
-  document.getElementById('btn-new').onclick = () => {
+  el.querySelector('#btn-new').onclick = () => {
     bk.step=1; bk.selectedCo=null; bk.selectedSlotKey=null; bk.weekOffset=0; bk.confirmData=null;
     if(bk.unsubSlots){bk.unsubSlots();bk.unsubSlots=null;}
     render();
