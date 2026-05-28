@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Prenota un incontro</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Sora:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0f0f0f;--bg2:#1a1a1a;--bg3:#242424;--bg4:#2e2e2e;--border:#333;--border2:#444;--text:#f0f0f0;--text2:#999;--text3:#666;--accent:#7c6fcd;--accent2:#a99ef0;--accent-bg:rgba(124,111,205,0.12);--green:#4caf7d;--green-bg:rgba(76,175,125,0.12);--red:#e05252;--radius:8px;--radius-lg:12px;}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Sora',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex;flex-direction:column;}
+.header{padding:20px 24px;border-bottom:1px solid var(--border);background:var(--bg2);text-align:center;}
+.logo{font-size:16px;font-weight:600;color:var(--accent2);font-family:'DM Mono',monospace;}
+.tagline{font-size:12px;color:var(--text3);margin-top:4px;}
+.main{flex:1;max-width:640px;margin:0 auto;padding:32px 20px;width:100%;}
+.steps{display:flex;align-items:center;justify-content:center;gap:0;margin-bottom:36px;}
+.step{display:flex;flex-direction:column;align-items:center;gap:6px;}
+.step-circle{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;font-family:'DM Mono',monospace;border:2px solid var(--border2);color:var(--text3);transition:all .2s;}
+.step-circle.active{border-color:var(--accent);color:var(--accent2);background:var(--accent-bg);}
+.step-circle.done{border-color:var(--green);color:var(--green);background:var(--green-bg);}
+.step-label{font-size:10px;color:var(--text3);text-align:center;}
+.step-label.active{color:var(--accent2);}
+.step-connector{width:60px;height:2px;background:var(--border);margin-bottom:20px;}
+.step-connector.done{background:var(--green);}
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-lg);padding:20px;margin-bottom:12px;cursor:pointer;transition:all .15s;}
+.card:hover{border-color:var(--accent);background:var(--bg3);}
+.card-title{font-size:15px;font-weight:600;}
+.card-sub{font-size:12px;color:var(--text2);margin-top:4px;}
+.slot-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:10px;margin-bottom:24px;}
+.slot-btn{background:var(--bg2);border:1px solid var(--border2);border-radius:var(--radius);padding:12px 8px;text-align:center;cursor:pointer;transition:all .15s;font-family:'DM Mono',monospace;}
+.slot-btn:hover{border-color:var(--accent);background:var(--accent-bg);color:var(--accent2);}
+.slot-btn.selected{border-color:var(--accent);background:var(--accent-bg);color:var(--accent2);font-weight:500;}
+.slot-btn.booked{background:var(--bg3);border-color:var(--border);color:var(--text3);cursor:not-allowed;opacity:.5;}
+.slot-time-big{font-size:16px;font-weight:600;}
+.slot-avail{font-size:10px;color:var(--text3);margin-top:3px;}
+.slot-btn.selected .slot-avail,.slot-btn:not(.booked):hover .slot-avail{color:var(--accent2);}
+.form-group{margin-bottom:16px;}
+.form-label{font-size:11px;font-weight:500;letter-spacing:.08em;color:var(--text2);margin-bottom:6px;display:block;text-transform:uppercase;font-family:'DM Mono',monospace;}
+.form-input{width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);padding:10px 14px;font-size:14px;color:var(--text);font-family:'Sora',sans-serif;transition:border .15s;}
+.form-input:focus{outline:none;border-color:var(--accent);}
+.btn{background:none;border:1px solid var(--border2);color:var(--text);border-radius:var(--radius);padding:10px 20px;font-size:14px;font-family:'Sora',sans-serif;cursor:pointer;transition:all .15s;}
+.btn:hover{background:var(--bg3);border-color:var(--accent);color:var(--accent2);}
+.btn-primary{background:var(--accent);border-color:var(--accent);color:white;width:100%;padding:14px;}
+.btn-primary:hover{background:var(--accent2);border-color:var(--accent2);color:var(--bg);}
+.btn-primary:disabled{opacity:.4;cursor:not-allowed;}
+.sec-title{font-size:18px;font-weight:600;margin-bottom:6px;}
+.sec-sub{font-size:13px;color:var(--text2);margin-bottom:20px;line-height:1.6;}
+.back-btn{background:none;border:none;color:var(--text3);cursor:pointer;font-size:13px;margin-bottom:20px;padding:0;display:flex;align-items:center;gap:6px;}
+.back-btn:hover{color:var(--text);}
+.confirm-box{background:var(--green-bg);border:1px solid var(--green);border-radius:var(--radius-lg);padding:32px;text-align:center;}
+.confirm-icon{font-size:48px;margin-bottom:16px;}
+.confirm-title{font-size:22px;font-weight:600;color:var(--green);margin-bottom:10px;}
+.confirm-detail{font-size:14px;color:var(--text2);line-height:1.8;}
+.confirm-ref{font-family:'DM Mono',monospace;font-size:12px;color:var(--text3);margin-top:14px;padding:8px 16px;background:rgba(0,0,0,.3);border-radius:var(--radius);display:inline-block;}
+.summary-bar{background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:12px 16px;margin-bottom:20px;display:flex;gap:16px;flex-wrap:wrap;}
+.summary-item{font-size:12px;color:var(--text2);}
+.summary-item strong{color:var(--text);}
+.week-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;}
+.week-label-sm{font-size:13px;font-weight:500;font-family:'DM Mono',monospace;}
+.nav-btn{background:none;border:1px solid var(--border2);color:var(--text2);border-radius:var(--radius);padding:4px 12px;cursor:pointer;font-size:13px;}
+.nav-btn:hover{border-color:var(--accent);color:var(--accent2);}
+.nav-btn:disabled{opacity:.3;cursor:not-allowed;}
+.toast{position:fixed;bottom:24px;right:24px;background:var(--bg2);border:1px solid var(--border2);border-radius:var(--radius-lg);padding:12px 18px;font-size:13px;z-index:300;animation:slideUp .2s ease;}
+@keyframes slideUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.toast.error{border-color:var(--red);color:var(--red);}
+::-webkit-scrollbar{width:6px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px;}
+.loading{text-align:center;padding:40px;color:var(--text3);font-size:13px;}
+.realtime-badge{display:inline-flex;align-items:center;gap:5px;font-size:10px;color:var(--green);font-family:'DM Mono',monospace;margin-left:10px;}
+.rt-dot{width:6px;height:6px;border-radius:50%;background:var(--green);animation:pulse 2s infinite;}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="logo">// prenota un incontro</div>
+  <div class="tagline">Seleziona la tua azienda e scegli uno slot disponibile</div>
+</div>
+
+<div class="main" id="main"><div class="loading">Caricamento...</div></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { getFirestore, collection, doc, setDoc, getDoc, getDocs, onSnapshot, query, where }
+  from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDvQK_iTYkuzqjqiNAn_-I_Ec-DDfGEwAo",
+  authDomain: "slot-booking-9baeb.firebaseapp.com",
+  projectId: "slot-booking-9baeb",
+  storageBucket: "slot-booking-9baeb.firebasestorage.app",
+  messagingSenderId: "651795993983",
+  appId: "1:651795993983:web:5168157edeecd398a7f64a"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+const DAYS_IT = ['','Lunedì','Martedì','Mercoledì','Giovedì','Venerdì','Sabato','Domenica'];
+const MONTHS_IT = ['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
+
+const bk = {
+  step: 1,
+  companies: [],
+  slots: {},
+  config: {},
+  selectedCo: null,
+  selectedSlotKey: null,
+  weekOffset: 0,
+  unsubSlots: null,
+  confirmData: null
+};
+
+function uid() { return Date.now().toString(36)+Math.random().toString(36).slice(2,6); }
+function toDateStr(d) { return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+
+// ── LOAD DATA ─────────────────────────────────────────────────────────────
+async function init() {
+  const [coSnap, cfgSnap] = await Promise.all([
+    getDocs(collection(db, 'companies')),
+    getDoc(doc(db, 'config', 'emailjs'))
+  ]);
+  bk.companies = coSnap.docs.map(d => ({id:d.id,...d.data()})).sort((a,b)=>a.name.localeCompare(b.name));
+  if (cfgSnap.exists()) {
+    bk.config = cfgSnap.data();
+    if (bk.config.pubkey) emailjs.init(bk.config.pubkey);
+  }
+  render();
+}
+
+// ── REALTIME SLOTS ────────────────────────────────────────────────────────
+function subscribeSlots(coId) {
+  if (bk.unsubSlots) { bk.unsubSlots(); bk.unsubSlots = null; }
+  const q = query(collection(db, 'slots'), where('coId','==',coId));
+  bk.unsubSlots = onSnapshot(q, snap => {
+    snap.docChanges().forEach(change => {
+      if (change.type==='removed') delete bk.slots[change.doc.id];
+      else bk.slots[change.doc.id] = change.doc.data();
+    });
+    if (bk.step === 2) renderStep2(document.getElementById('step-content'));
+  });
+}
+
+// ── RENDER ────────────────────────────────────────────────────────────────
+function render() {
+  const main = document.getElementById('main');
+  const stepLabels = ['Azienda','Slot','Dati','Conferma'];
+  let html = '<div class="steps">';
+  stepLabels.forEach((lbl,i) => {
+    const n=i+1, cls=n<bk.step?'done':n===bk.step?'active':'', icon=n<bk.step?'✓':n;
+    html += `<div class="step"><div class="step-circle ${cls}">${icon}</div><div class="step-label ${cls}">${lbl}</div></div>`;
+    if (i<stepLabels.length-1) html += `<div class="step-connector ${n<bk.step?'done':''}"></div>`;
+  });
+  html += '</div>';
+  main.innerHTML = html;
+  const content = document.createElement('div');
+  content.id = 'step-content';
+  if (bk.step===1) renderStep1(content);
+  else if (bk.step===2) renderStep2(content);
+  else if (bk.step===3) renderStep3(content);
+  else renderStep4(content);
+  main.appendChild(content);
+}
+
+function renderStep1(el) {
+  el.innerHTML = `<div class="sec-title">Seleziona la tua azienda</div>
+    <div class="sec-sub">Scegli l'azienda per cui vuoi prenotare un incontro.</div>`;
+  if (!bk.companies.length) {
+    el.innerHTML += '<div style="text-align:center;padding:40px;color:var(--text3);">Nessuna azienda disponibile.</div>';
+    return;
+  }
+  bk.companies.forEach(co => {
+    const div = document.createElement('div');
+    div.className = 'card';
+    div.innerHTML = `<div style="display:flex;align-items:center;gap:12px;">
+      <div style="width:12px;height:12px;border-radius:50%;background:${co.color};flex-shrink:0;"></div>
+      <div><div class="card-title">${co.name}</div>
+      <div class="card-sub">${DAYS_IT[co.day]} · ${co.duration} min · ${co.startTime}–${co.endTime}</div></div>
+    </div>`;
+    div.onclick = () => {
+      bk.selectedCo = co; bk.slots = {}; bk.step = 2; bk.weekOffset = 0;
+      subscribeSlots(co.id);
+      render();
+    };
+    el.appendChild(div);
+  });
+}
+
+function getAvailableDates(co, weekOffset) {
+  const now = new Date();
+  const todayDow = now.getDay()||7;
+  const monday = new Date(now); monday.setDate(now.getDate()-todayDow+1+weekOffset*7);
+  const dates = [];
+  for (let i=0;i<7;i++) {
+    const d = new Date(monday); d.setDate(monday.getDate()+i);
+    if ((d.getDay()||7)===co.day && toDateStr(d)>=toDateStr(now)) dates.push(d);
+  }
+  return dates;
+}
+
+function generateSlots(co, date) {
+  const dateStr = toDateStr(date);
+  const [sh,sm] = co.startTime.split(':').map(Number);
+  const [eh,em] = co.endTime.split(':').map(Number);
+  const slots = [];
+  for (let m=sh*60+sm; m+co.duration<=eh*60+em; m+=co.duration) {
+    const hh=String(Math.floor(m/60)).padStart(2,'0'), mm=String(m%60).padStart(2,'0');
+    const key = co.id+'_'+dateStr+'_'+hh+':'+mm;
+    const data = bk.slots[key]||{};
+    if (data.blocked) continue;
+    slots.push({key, time:hh+':'+mm, dateStr, booked:!!data.booked});
+  }
+  return slots;
+}
+
+function renderStep2(el) {
+  const co = bk.selectedCo;
+  const dates = getAvailableDates(co, bk.weekOffset);
+  const now = new Date();
+  const todayDow = now.getDay()||7;
+  const monday = new Date(now); monday.setDate(now.getDate()-todayDow+1+bk.weekOffset*7);
+  const sunday = new Date(monday); sunday.setDate(monday.getDate()+6);
+  const weekLabel = monday.getDate()+' '+MONTHS_IT[monday.getMonth()].slice(0,3)+' – '+sunday.getDate()+' '+MONTHS_IT[sunday.getMonth()].slice(0,3);
+
+  el.innerHTML = `
+    <button class="back-btn" id="back-step1">← Cambia azienda</button>
+    <div class="sec-title">Scegli uno slot <span class="realtime-badge"><span class="rt-dot"></span>live</span></div>
+    <div class="summary-bar">
+      <div class="summary-item"><strong>${co.name}</strong></div>
+      <div class="summary-item">Ogni <strong>${DAYS_IT[co.day]}</strong></div>
+      <div class="summary-item">Slot da <strong>${co.duration} min</strong></div>
+    </div>
+    <div class="week-nav">
+      <button class="nav-btn" id="nav-prev" ${bk.weekOffset<=0?'disabled':''}>‹ Prec</button>
+      <span class="week-label-sm">${weekLabel}</span>
+      <button class="nav-btn" id="nav-next">Succ ›</button>
+    </div>
+    <div id="slots-area"></div>
+    <div id="continue-btn-wrap"></div>`;
+
+  document.getElementById('back-step1').onclick = () => { bk.step=1; if(bk.unsubSlots){bk.unsubSlots();bk.unsubSlots=null;} render(); };
+  document.getElementById('nav-prev').onclick = () => { bk.weekOffset--; renderStep2(el); };
+  document.getElementById('nav-next').onclick = () => { bk.weekOffset++; renderStep2(el); };
+
+  const area = document.getElementById('slots-area');
+  if (!dates.length) {
+    area.innerHTML = '<div style="text-align:center;padding:30px;color:var(--text3);font-size:13px;">Nessuna data questa settimana. Prova quella successiva.</div>';
+  } else {
+    dates.forEach(date => {
+      const slots = generateSlots(co, date);
+      const free = slots.filter(s=>!s.booked).length;
+      const sec = document.createElement('div');
+      sec.style.marginBottom = '24px';
+      sec.innerHTML = `<div style="font-size:13px;font-weight:500;color:var(--text2);margin-bottom:12px;">
+        ${DAYS_IT[date.getDay()||7]} <strong style="color:var(--text)">${date.getDate()} ${MONTHS_IT[date.getMonth()]} ${date.getFullYear()}</strong>
+        <span style="font-size:11px;color:var(--text3);margin-left:8px;">${free} liberi</span>
+      </div><div class="slot-grid">${
+        slots.map(s => {
+          const sel = bk.selectedSlotKey===s.key;
+          return `<div class="slot-btn${s.booked?' booked':sel?' selected':''}" data-key="${s.key}" ${s.booked?'':'style="cursor:pointer"'}>
+            <div class="slot-time-big">${s.time}</div>
+            <div class="slot-avail">${s.booked?'Occupato':'Disponibile'}</div>
+          </div>`;
+        }).join('')
+      }</div>`;
+      area.appendChild(sec);
+    });
+    area.querySelectorAll('.slot-btn:not(.booked)').forEach(btn => {
+      btn.addEventListener('click', () => {
+        bk.selectedSlotKey = btn.dataset.key;
+        area.querySelectorAll('.slot-btn').forEach(b => b.classList.remove('selected'));
+        btn.classList.add('selected');
+        const wrap = document.getElementById('continue-btn-wrap');
+        wrap.innerHTML = `<button class="btn btn-primary" id="btn-continue">Continua →</button>`;
+        document.getElementById('btn-continue').onclick = () => { bk.step=3; render(); };
+      });
+    });
+  }
+
+  if (bk.selectedSlotKey) {
+    const wrap = document.getElementById('continue-btn-wrap');
+    if (!wrap.innerHTML) {
+      wrap.innerHTML = `<button class="btn btn-primary" id="btn-continue">Continua →</button>`;
+      document.getElementById('btn-continue').onclick = () => { bk.step=3; render(); };
+    }
+  }
+}
+
+function renderStep3(el) {
+  const parts = bk.selectedSlotKey.split('_');
+  const dateStr=parts[1], time=parts[2];
+  el.innerHTML = `
+    <button class="back-btn" id="back-step2">← Torna agli slot</button>
+    <div class="sec-title">I tuoi dati</div>
+    <div class="summary-bar">
+      <div class="summary-item"><strong>${bk.selectedCo.name}</strong></div>
+      <div class="summary-item">📅 <strong>${dateStr}</strong> ore <strong>${time}</strong></div>
+      <div class="summary-item">⏱ <strong>${bk.selectedCo.duration} min</strong></div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Nome</label>
+      <input type="text" class="form-input" id="bk-firstname" placeholder="Mario" autocomplete="given-name" />
+    </div>
+    <div class="form-group">
+      <label class="form-label">Cognome</label>
+      <input type="text" class="form-input" id="bk-lastname" placeholder="Rossi" autocomplete="family-name" />
+    </div>
+    <button class="btn btn-primary" id="bk-confirm-btn">Conferma prenotazione</button>`;
+
+  document.getElementById('back-step2').onclick = () => { bk.step=2; render(); };
+  document.getElementById('bk-confirm-btn').onclick = confirmBooking;
+  document.getElementById('bk-firstname').addEventListener('keydown', e => { if(e.key==='Enter') document.getElementById('bk-lastname').focus(); });
+  document.getElementById('bk-lastname').addEventListener('keydown', e => { if(e.key==='Enter') confirmBooking(); });
+  setTimeout(() => document.getElementById('bk-firstname').focus(), 50);
+}
+
+async function confirmBooking() {
+  const fn = document.getElementById('bk-firstname').value.trim();
+  const ln = document.getElementById('bk-lastname').value.trim();
+  if (!fn||!ln) { showToast('Inserisci nome e cognome','error'); return; }
+  const btn = document.getElementById('bk-confirm-btn');
+  btn.disabled=true; btn.textContent='Prenotazione in corso...';
+
+  const parts = bk.selectedSlotKey.split('_');
+  const dateStr=parts[1], time=parts[2];
+  const fullName = fn+' '+ln;
+  const ref = uid().toUpperCase();
+  const co = bk.selectedCo;
+
+  // check not taken
+  const current = bk.slots[bk.selectedSlotKey];
+  if (current?.booked) {
+    showToast('Slot già prenotato, scegline un altro','error');
+    bk.step=2; render(); return;
+  }
+
+  // write to Firestore
+  const slotData = {
+    key: bk.selectedSlotKey, coId: co.id,
+    dateStr, time, booked:true, bookerName:fullName,
+    bookedAt: new Date().toISOString(), ref, blocked:false
+  };
+  try {
+    await setDoc(doc(db, 'slots', bk.selectedSlotKey), slotData);
+    bk.slots[bk.selectedSlotKey] = slotData;
+  } catch(e) {
+    showToast('Errore di connessione, riprova','error');
+    btn.disabled=false; btn.textContent='Conferma prenotazione'; return;
+  }
+
+  // send emails
+  const cfg = bk.config;
+  let emailOk = false;
+  if (cfg.pubkey && cfg.serviceId) {
+    const params = { company_name:co.name, booking_date:dateStr, booking_time:time, duration:co.duration, booker_name:fullName, ref_code:ref, consultant_email:cfg.consultantEmail||'' };
+    try {
+      const promises = [];
+      if (cfg.tplClient && co.email) promises.push(emailjs.send(cfg.serviceId, cfg.tplClient, {...params, to_email:co.email, to_name:co.name}));
+      if (cfg.tplConsultant && cfg.consultantEmail) promises.push(emailjs.send(cfg.serviceId, cfg.tplConsultant, {...params, to_email:cfg.consultantEmail, to_name:'Consulente'}));
+      await Promise.all(promises);
+      emailOk = true;
+    } catch(e) { console.warn('EmailJS:', e); }
+  }
+
+  bk.confirmData = { fullName, dateStr, time, ref, emailOk, coName:co.name, duration:co.duration };
+  bk.step = 4;
+  render();
+}
+
+function renderStep4(el) {
+  const d = bk.confirmData;
+  el.innerHTML = `
+    <div class="confirm-box">
+      <div class="confirm-icon">✅</div>
+      <div class="confirm-title">Prenotazione confermata!</div>
+      <div class="confirm-detail">
+        <strong>${d.fullName}</strong><br>
+        ${d.coName}<br><br>
+        📅 ${d.dateStr}<br>
+        🕐 ${d.time} · ${d.duration} minuti
+      </div>
+      ${d.emailOk ? `<div style="margin-top:14px;font-size:12px;color:var(--green);">✓ Email di conferma inviata</div>` : ''}
+      <div class="confirm-ref">Ref: ${d.ref}</div>
+    </div>
+    <button class="btn" style="width:100%;margin-top:16px;" id="btn-new">Effettua un'altra prenotazione</button>`;
+  document.getElementById('btn-new').onclick = () => {
+    bk.step=1; bk.selectedCo=null; bk.selectedSlotKey=null; bk.weekOffset=0; bk.confirmData=null;
+    if(bk.unsubSlots){bk.unsubSlots();bk.unsubSlots=null;}
+    render();
+  };
+}
+
+function showToast(msg, type='') {
+  const t=document.createElement('div'); t.className='toast '+type; t.textContent=msg;
+  document.body.appendChild(t); setTimeout(()=>t.remove(),2800);
+}
+
+init();
+</script>
+</body>
+</html>
