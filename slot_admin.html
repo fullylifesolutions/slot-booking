@@ -385,7 +385,21 @@ function renderCompanyList(){
 }
 
 window.selectCompany=function(id){
-  state.selectedCoId=id; state.currentWeekOffset=0;
+  state.selectedCoId=id;
+  const co=getCo(id);
+  state.currentWeekOffset=0;
+  // auto-advance to first week with available dates
+  if(co){
+    for(let w=0;w<52;w++){
+      const dates=getDatesInWeek(co.schedules,w,co);
+      if(dates.length>0){ state.currentWeekOffset=w; break; }
+      if(co.endDate){
+        const now=new Date(), todayDow=now.getDay()||7;
+        const monday=new Date(now); monday.setDate(now.getDate()-todayDow+1+w*7);
+        if(toDateStr(monday)>co.endDate) break;
+      }
+    }
+  }
   renderCompanyList(); subscribeSlots(id);
 };
 
@@ -636,10 +650,12 @@ function renderCompanyDetail(){
     for(const date of dates){
       const slotKeys=generateSlotKeys(co,date);
       const slotKeys2=generateSlotKeys(co,date);
+      const totalSlots=slotKeys2.length;
       const bookedCount=slotKeys2.filter(({key})=>(state.slots[key]||{}).booked).length;
-      const maxDay=co.maxPerDay||slotKeys2.length;
-      const remaining=Math.max(0,maxDay-bookedCount);
-      const remainingLabel=co.maxPerDay?` · <span style="color:${remaining===0?'var(--red)':remaining<=2?'var(--amber)':'var(--green)'}">${remaining} slot rimasti</span>`:'';
+      const freeCount=totalSlots-bookedCount;
+      const limitLabel=co.maxPerDay?' / max '+co.maxPerDay:'';
+      const dotColor=freeCount===0?'var(--red)':freeCount<=2?'var(--amber)':'var(--green)';
+      const remainingLabel=` · <span style="color:${dotColor}">${bookedCount} prenotati · ${freeCount} liberi${limitLabel}</span>`;
       html+=`<div style="margin-bottom:24px;">
         <div style="font-size:13px;font-weight:500;color:var(--text2);margin-bottom:12px;font-family:'DM Mono',monospace;">${DAYS_IT[date.getDay()||7]} ${date.getDate()} ${MONTHS_IT[date.getMonth()]} ${date.getFullYear()}${remainingLabel}</div>
         <div class="slots-grid">`;
