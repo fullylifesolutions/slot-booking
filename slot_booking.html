@@ -521,7 +521,9 @@ async function confirmBooking(){
   let emailOk=false;
   const cfg=bk.config;
   if(cfg.pubkey&&cfg.serviceId){
-    const params={company_name:co.name,booking_date:dateStr,booking_time:time,duration:co.duration,booker_name:fullName,ref_code:ref,consultant_email:cfg.consultantEmail||''};
+    const [dy,dm,dd]=dateStr.split('-');
+  const bookingDateFormatted=dd+'/'+dm+'/'+dy;
+  const params={company_name:co.name,booking_date:bookingDateFormatted,booking_time:time,duration:co.duration,booker_name:fullName,ref_code:ref,consultant_email:cfg.consultantEmail||''};
     try{
       const promises=[];
       if(cfg.tplClient&&email) promises.push(emailjs.send(cfg.serviceId,cfg.tplClient,{...params,to_email:email,to_name:fullName}));
