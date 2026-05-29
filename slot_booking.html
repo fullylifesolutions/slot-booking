@@ -232,6 +232,15 @@ function generateSlots(co, date){
       slots.push({key, time:hh+':'+mm, dateStr, booked:!!data.booked, bookerName:data.bookerName||''});
     }
   }
+  // apply maxPerDay limit: count booked, mark excess as blocked visually
+  if(co.maxPerDay){
+    let bookedCount=slots.filter(s=>s.booked).length;
+    return slots.map(s=>{
+      if(!s.booked && bookedCount>=co.maxPerDay) return {...s, booked:true, maxReached:true};
+      if(s.booked) bookedCount++;
+      return s;
+    });
+  }
   return slots;
 }
 
@@ -370,7 +379,7 @@ function renderStep2(el){
       </div><div class="slot-grid">${
         slots.map(s=>`<div class="slot-btn${s.booked?' booked':bk.selectedSlotKey===s.key?' selected':''}" data-key="${s.key}" data-booked="${s.booked}">
           <div class="slot-time-big">${s.time}</div>
-          <div class="slot-avail">${s.booked?'Occupato':'Disponibile'}</div>
+          <div class="slot-avail">${s.maxReached?'Giornata completa':s.booked?'Occupato':'Disponibile'}</div>
         </div>`).join('')
       }</div>`;
       area.appendChild(sec);
@@ -418,6 +427,10 @@ function renderStep3(el){
     <div class="form-group">
       <label class="form-label">Email</label>
       <input type="email" class="form-input" id="bk-email" placeholder="mario.rossi@azienda.com" autocomplete="email" />
+    </div>
+    <div class="form-group">
+      <label class="form-label">Argomento / Note (opzionale)</label>
+      <textarea class="form-input" id="bk-notes" placeholder="Es. Revisione contratto, aggiornamento piano..." style="min-height:70px;resize:vertical;font-size:13px;"></textarea>
     </div>
     <button class="btn btn-primary" id="bk-confirm">Conferma prenotazione</button>`;
   el.querySelector('#back-s2').onclick=()=>{ bk.step=2; render(); };
@@ -499,6 +512,7 @@ async function confirmBooking(){
   const fn=el.querySelector('#bk-fn').value.trim();
   const ln=el.querySelector('#bk-ln').value.trim();
   const email=el.querySelector('#bk-email').value.trim();
+  const notes=el.querySelector('#bk-notes').value.trim();
   if(!fn||!ln){ showToast('Inserisci nome e cognome','error'); return; }
   if(!email||!email.includes('@')){ showToast('Inserisci un’email valida','error'); return; }
   const btn=el.querySelector('#bk-confirm');
@@ -513,7 +527,7 @@ async function confirmBooking(){
   const current=bk.slots[bk.selectedSlotKey];
   if(current?.booked){ showToast('Slot già prenotato, scegline un altro','error'); bk.step=2; render(); return; }
 
-  const slotData={key:bk.selectedSlotKey,coId:co.id,dateStr,time,booked:true,bookerName:fullName,bookerEmail:email,bookedAt:new Date().toISOString(),ref,blocked:false};
+  const slotData={key:bk.selectedSlotKey,coId:co.id,dateStr,time,booked:true,bookerName:fullName,bookerEmail:email,notes,bookedAt:new Date().toISOString(),ref,blocked:false};
   try{
     await setDoc(doc(db,'slots',bk.selectedSlotKey),slotData);
     bk.slots[bk.selectedSlotKey]=slotData;
@@ -524,7 +538,7 @@ async function confirmBooking(){
   if(cfg.pubkey&&cfg.serviceId){
     const [dy,dm,dd]=dateStr.split('-');
   const bookingDateFormatted=dd+'/'+dm+'/'+dy;
-  const params={company_name:co.name,booking_date:bookingDateFormatted,booking_time:time,duration:co.duration,booker_name:fullName,ref_code:ref,consultant_email:cfg.consultantEmail||''};
+  const params={company_name:co.name,booking_date:bookingDateFormatted,booking_time:time,duration:co.duration,booker_name:fullName,ref_code:ref,booking_notes:notes||'Nessuna nota',consultant_email:cfg.consultantEmail||''};
     try{
       const promises=[];
       if(cfg.tplClient&&email) promises.push(emailjs.send(cfg.serviceId,cfg.tplClient,{...params,to_email:email,to_name:fullName}));

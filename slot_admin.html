@@ -179,6 +179,10 @@ body{font-family:'Sora',sans-serif;background:var(--bg);color:var(--text);min-he
             <option value="120">120 min</option>
           </select>
         </div>
+        <div class="form-group">
+          <label class="form-label">Max prenotazioni/giorno</label>
+          <input type="number" class="form-input" id="co-maxperday" min="1" max="20" placeholder="Illimitato" />
+        </div>
       </div>
       <div class="two-col">
         <div class="form-group">
@@ -397,6 +401,7 @@ window.openCompanyModal=function(id){
   document.getElementById('co-notes').value=co?.notes||'';
   document.getElementById('co-start-date').value=co?.startDate||'';
   document.getElementById('co-end-date').value=co?.endDate||'';
+  document.getElementById('co-maxperday').value=co?.maxPerDay||'';
   document.getElementById('co-delete-btn').style.display=id?'inline-flex':'none';
   state.selectedColor=co?.color||COMPANY_COLORS[0];
   // init schedules
@@ -442,6 +447,11 @@ function renderSchedulesList(){
   if(!state.selectedDays.length){ el.innerHTML='<div style="font-size:12px;color:var(--text3);padding:8px 0;">Seleziona almeno un giorno sopra.</div>'; return; }
   el.innerHTML=state.selectedDays.map(d=>{
     const ranges=state.schedules[d]||[{start:'09:00',end:'18:00'}];
+    const otherDays=state.selectedDays.filter(x=>x!==d);
+    const copyOptions=otherDays.map(x=>`<option value="${x}">Copia da ${DAYS_IT[x].slice(0,3)}</option>`).join('');
+    const copySelect=otherDays.length?`<select class="range-input" style="width:auto;font-size:11px;cursor:pointer;" onchange="copyRangesFrom(${d},parseInt(this.value));this.value=''">
+      <option value="">Copia da...</option>${copyOptions}
+    </select>`:'';
     const rangesHtml=ranges.map((r,i)=>`
       <div class="range-row">
         <input type="time" class="range-input" value="${r.start}" onchange="updateRange(${d},${i},'start',this.value)" />
@@ -452,7 +462,10 @@ function renderSchedulesList(){
     return `<div class="schedule-day-row">
       <div class="schedule-day-header">
         <span class="schedule-day-name">${DAYS_IT[d]}</span>
-        <button class="btn-xs btn" onclick="addRange(${d})">+ Fascia</button>
+        <div style="display:flex;gap:6px;align-items:center;">
+          ${copySelect}
+          <button class="btn-xs btn" onclick="addRange(${d})">+ Fascia</button>
+        </div>
       </div>
       ${rangesHtml}
     </div>`;
@@ -471,6 +484,12 @@ window.removeRange=function(day,idx){
   state.schedules[day].splice(idx,1);
   renderSchedulesList();
 };
+window.copyRangesFrom=function(targetDay, sourceDay){
+  if(!state.schedules[sourceDay]) return;
+  state.schedules[targetDay]=JSON.parse(JSON.stringify(state.schedules[sourceDay]));
+  renderSchedulesList();
+  showToast('Fasce copiate da '+DAYS_IT[sourceDay],'success');
+};
 
 window.saveCompany=async function(){
   const name=document.getElementById('co-name').value.trim();
@@ -485,7 +504,8 @@ window.saveCompany=async function(){
     notes:document.getElementById('co-notes').value.trim(),
     color:state.selectedColor, schedules,
     startDate:document.getElementById('co-start-date').value||null,
-    endDate:document.getElementById('co-end-date').value||null
+    endDate:document.getElementById('co-end-date').value||null,
+    maxPerDay:parseInt(document.getElementById('co-maxperday').value)||null
   };
   if(state.editingCoId){
     const idx=state.companies.findIndex(c=>c.id===state.editingCoId);
@@ -553,6 +573,20 @@ window.toggleBlockSlot=async function(key,coId){
   renderCompanyDetail();
 };
 
+window.exportCSV=function(){
+  const co=getCo(state.selectedCoId); if(!co)return;
+  const bookings=Object.entries(state.slots).filter(([k,v])=>v.coId===co.id&&v.booked).sort(([a],[b])=>a.localeCompare(b));
+  if(!bookings.length){showToast('Nessuna prenotazione da esportare','warn');return;}
+  const rows=[['Data','Ora','Nome','Email','Note','Codice']];
+  bookings.forEach(([k,v])=>rows.push([v.dateStr,v.time,v.bookerName||'',v.bookerEmail||'',v.notes||'',v.ref||'']));
+  const csv=rows.map(r=>r.map(c=>'"'+String(c).replace(/"/g,'""')+'"').join(',')).join('
+');
+  const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
+  a.download=co.name.replace(/\s+/g,'_')+'_prenotazioni_'+toDateStr(new Date())+'.csv';
+  a.click(); showToast('CSV esportato','success');
+};
+
 window.cancelBooking=async function(key){
   if(!confirm('Annullare questa prenotazione?'))return;
   await removeSlot(key);
@@ -578,7 +612,7 @@ function renderCompanyDetail(){
   const isNotStarted = co.startDate && co.startDate > today;
   let html=`
     <div class="section-title">${co.name}${isExpired?' <span class="badge badge-amber">Scaduta</span>':''}</div>
-    <div class="section-sub">${(co.schedules||[]).map(s=>DAYS_IT[s.day]+' ('+s.ranges.map(r=>r.start+'–'+r.end).join(', ')+')').join(' · ')} · ${co.duration} min${co.startDate?' · Dal '+co.startDate:''}${co.endDate?' · Al '+co.endDate:''}</div>
+    <div class="section-sub">${(co.schedules||[]).map(s=>DAYS_IT[s.day]+' ('+s.ranges.map(r=>r.start+'–'+r.end).join(', ')+')').join(' · ')} · ${co.duration} min${co.maxPerDay?' · Max '+co.maxPerDay+'/giorno':''}${co.startDate?' · Dal '+co.startDate:''}${co.endDate?' · Al '+co.endDate:''}</div>
     <div style="margin-bottom:16px;">
       <div style="font-size:11px;color:var(--text3);font-family:'DM Mono',monospace;margin-bottom:6px;">LINK CLIENTE${co.pin?' · PIN: <strong style="color:var(--amber)">'+co.pin+'</strong>':' · Nessun PIN'}</div>
       <div class="link-box" onclick="copyLink('${bookingUrl}')" title="Clicca per copiare">${bookingUrl}</div>
@@ -602,8 +636,13 @@ function renderCompanyDetail(){
   } else {
     for(const date of dates){
       const slotKeys=generateSlotKeys(co,date);
+      const slotKeys2=generateSlotKeys(co,date);
+      const bookedCount=slotKeys2.filter(({key})=>(state.slots[key]||{}).booked).length;
+      const maxDay=co.maxPerDay||slotKeys2.length;
+      const remaining=Math.max(0,maxDay-bookedCount);
+      const remainingLabel=co.maxPerDay?` · <span style="color:${remaining===0?'var(--red)':remaining<=2?'var(--amber)':'var(--green)'}">${remaining} slot rimasti</span>`:'';
       html+=`<div style="margin-bottom:24px;">
-        <div style="font-size:13px;font-weight:500;color:var(--text2);margin-bottom:12px;font-family:'DM Mono',monospace;">${DAYS_IT[date.getDay()||7]} ${date.getDate()} ${MONTHS_IT[date.getMonth()]} ${date.getFullYear()}</div>
+        <div style="font-size:13px;font-weight:500;color:var(--text2);margin-bottom:12px;font-family:'DM Mono',monospace;">${DAYS_IT[date.getDay()||7]} ${date.getDate()} ${MONTHS_IT[date.getMonth()]} ${date.getFullYear()}${remainingLabel}</div>
         <div class="slots-grid">`;
       for(const {key,time} of slotKeys){
         const s=state.slots[key]||{};
@@ -624,10 +663,14 @@ function renderCompanyDetail(){
   if(!allBookings.length){
     html+=`<div class="empty-state"><div class="empty-icon">📋</div><div class="empty-text">Nessuna prenotazione.</div></div>`;
   } else {
-    html+=`<table class="bookings-table"><thead><tr><th>Data</th><th>Ora</th><th>Nome</th><th>Rif.</th><th></th></tr></thead><tbody>`;
+    html+=`<div style="display:flex;justify-content:flex-end;margin-bottom:12px;">
+      <button class="btn btn-sm" onclick="exportCSV()">↓ Esporta CSV</button>
+    </div>`;
+    html+=`<table class="bookings-table"><thead><tr><th>Data</th><th>Ora</th><th>Nome</th><th>Note</th><th>Rif.</th><th></th></tr></thead><tbody>`;
     for(const [key,v] of allBookings){
       html+=`<tr><td>${v.dateStr}</td><td style="font-family:'DM Mono',monospace;">${v.time}</td>
         <td>${v.bookerName||'—'}<br><span style="font-size:11px;color:var(--text3);">${v.bookerEmail||''}</span></td>
+        <td style="font-size:12px;color:var(--text2);max-width:160px;">${v.notes||'—'}</td>
         <td style="font-family:'DM Mono',monospace;font-size:11px;color:var(--text3);">${v.ref||'—'}</td>
         <td><button class="btn btn-sm btn-danger" onclick="cancelBooking('${key}')">Annulla</button></td></tr>`;
     }

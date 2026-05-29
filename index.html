@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fullylife Solutions — Prenota un incontro</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Sora:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0f0f0f;--bg2:#1a1a1a;--bg3:#242424;--border:#333;--border2:#444;--text:#f0f0f0;--text2:#999;--text3:#666;--accent:#7c6fcd;--accent2:#a99ef0;--accent-bg:rgba(124,111,205,0.12);--amber:#e8a838;--green:#4caf7d;--radius:12px;}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Sora',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;}
+.wrap{width:100%;max-width:480px;text-align:center;}
+.brand{font-size:13px;font-weight:600;color:var(--amber);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:32px;}
+.logo{font-size:32px;font-weight:700;margin-bottom:10px;line-height:1.2;}
+.logo span{color:var(--accent2);}
+.tagline{font-size:15px;color:var(--text2);margin-bottom:48px;line-height:1.6;}
+.main-btn{display:block;width:100%;background:var(--accent);border:none;border-radius:var(--radius);padding:18px 24px;font-size:16px;font-weight:600;color:white;cursor:pointer;text-decoration:none;transition:all .2s;font-family:'Sora',sans-serif;margin-bottom:16px;}
+.main-btn:hover{background:var(--accent2);color:var(--bg);transform:translateY(-1px);box-shadow:0 8px 32px rgba(124,111,205,0.3);}
+.main-btn-sub{font-size:12px;opacity:0.7;font-weight:400;display:block;margin-top:4px;}
+.divider{display:flex;align-items:center;gap:12px;margin:32px 0;color:var(--text3);font-size:12px;}
+.divider::before,.divider::after{content:'';flex:1;height:1px;background:var(--border);}
+.features{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:48px;}
+.feature{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:16px;text-align:left;}
+.feature-icon{font-size:20px;margin-bottom:8px;}
+.feature-title{font-size:13px;font-weight:500;margin-bottom:4px;}
+.feature-sub{font-size:11px;color:var(--text3);line-height:1.5;}
+.admin-link{font-size:12px;color:var(--text3);text-decoration:none;display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:8px;transition:all .15s;border:1px solid transparent;}
+.admin-link:hover{color:var(--text2);border-color:var(--border2);background:var(--bg2);}
+.footer{margin-top:48px;font-size:11px;color:var(--text3);}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="brand">Fullylife Solutions</div>
+  <div class="logo">Prenota un<br><span>incontro</span></div>
+  <div class="tagline">Scegli il giorno e l'ora che preferisci.<br>Semplice, veloce, senza attese.</div>
+
+  <a href="slot_booking.html" class="main-btn">
+    Prenota ora
+    <span class="main-btn-sub">Scegli la tua azienda e uno slot disponibile</span>
+  </a>
+
+  <div class="features">
+    <div class="feature">
+      <div class="feature-icon">📅</div>
+      <div class="feature-title">Giorni dedicati</div>
+      <div class="feature-sub">Ogni azienda ha il suo giorno fisso con slot disponibili</div>
+    </div>
+    <div class="feature">
+      <div class="feature-icon">⚡</div>
+      <div class="feature-title">Conferma immediata</div>
+      <div class="feature-sub">Ricevi subito email di conferma con il codice di riferimento</div>
+    </div>
+    <div class="feature">
+      <div class="feature-icon">🔄</div>
+      <div class="feature-title">Modifica facile</div>
+      <div class="feature-sub">Usa il codice ricevuto per cancellare e riprenota quando vuoi</div>
+    </div>
+    <div class="feature">
+      <div class="feature-icon">🔒</div>
+      <div class="feature-title">Accesso privato</div>
+      <div class="feature-sub">Ogni azienda ha il suo codice di accesso dedicato</div>
+    </div>
+  </div>
+
+  <a href="slot_admin.html" class="admin-link">
+    🔑 Accesso consulente
+  </a>
+
+  <div class="footer">© 2026 Fullylife Solutions</div>
+</div>
+</body>
+</html>
