@@ -414,11 +414,16 @@ function renderStep3(el){
       <label class="form-label">Cognome</label>
       <input type="text" class="form-input" id="bk-ln" placeholder="Rossi" autocomplete="family-name" />
     </div>
+    <div class="form-group">
+      <label class="form-label">Email</label>
+      <input type="email" class="form-input" id="bk-email" placeholder="mario.rossi@azienda.com" autocomplete="email" />
+    </div>
     <button class="btn btn-primary" id="bk-confirm">Conferma prenotazione</button>`;
   el.querySelector('#back-s2').onclick=()=>{ bk.step=2; render(); };
   el.querySelector('#bk-confirm').onclick=confirmBooking;
   el.querySelector('#bk-fn').addEventListener('keydown',e=>{ if(e.key==='Enter') el.querySelector('#bk-ln').focus(); });
-  el.querySelector('#bk-ln').addEventListener('keydown',e=>{ if(e.key==='Enter') confirmBooking(); });
+  el.querySelector('#bk-ln').addEventListener('keydown',e=>{ if(e.key==='Enter') el.querySelector('#bk-email').focus(); });
+  el.querySelector('#bk-email').addEventListener('keydown',e=>{ if(e.key==='Enter') confirmBooking(); });
   setTimeout(()=>{ const f=el.querySelector('#bk-fn'); if(f)f.focus(); },50);
 }
 
@@ -492,7 +497,9 @@ async function confirmBooking(){
   const el=document.getElementById('step-content');
   const fn=el.querySelector('#bk-fn').value.trim();
   const ln=el.querySelector('#bk-ln').value.trim();
+  const email=el.querySelector('#bk-email').value.trim();
   if(!fn||!ln){ showToast('Inserisci nome e cognome','error'); return; }
+  if(!email||!email.includes('@')){ showToast('Inserisci un’email valida','error'); return; }
   const btn=el.querySelector('#bk-confirm');
   btn.disabled=true; btn.textContent='Prenotazione in corso...';
 
@@ -505,7 +512,7 @@ async function confirmBooking(){
   const current=bk.slots[bk.selectedSlotKey];
   if(current?.booked){ showToast('Slot già prenotato, scegline un altro','error'); bk.step=2; render(); return; }
 
-  const slotData={key:bk.selectedSlotKey,coId:co.id,dateStr,time,booked:true,bookerName:fullName,bookedAt:new Date().toISOString(),ref,blocked:false};
+  const slotData={key:bk.selectedSlotKey,coId:co.id,dateStr,time,booked:true,bookerName:fullName,bookerEmail:email,bookedAt:new Date().toISOString(),ref,blocked:false};
   try{
     await setDoc(doc(db,'slots',bk.selectedSlotKey),slotData);
     bk.slots[bk.selectedSlotKey]=slotData;
@@ -517,7 +524,7 @@ async function confirmBooking(){
     const params={company_name:co.name,booking_date:dateStr,booking_time:time,duration:co.duration,booker_name:fullName,ref_code:ref,consultant_email:cfg.consultantEmail||''};
     try{
       const promises=[];
-      if(cfg.tplClient&&co.email) promises.push(emailjs.send(cfg.serviceId,cfg.tplClient,{...params,to_email:co.email,to_name:co.name}));
+      if(cfg.tplClient&&email) promises.push(emailjs.send(cfg.serviceId,cfg.tplClient,{...params,to_email:email,to_name:fullName}));
       if(cfg.tplConsultant&&cfg.consultantEmail) promises.push(emailjs.send(cfg.serviceId,cfg.tplConsultant,{...params,to_email:cfg.consultantEmail,to_name:'Consulente'}));
       await Promise.all(promises); emailOk=true;
     }catch(e){ console.warn('EmailJS:',e); }

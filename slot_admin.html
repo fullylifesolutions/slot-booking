@@ -627,7 +627,7 @@ function renderCompanyDetail(){
     html+=`<table class="bookings-table"><thead><tr><th>Data</th><th>Ora</th><th>Nome</th><th>Rif.</th><th></th></tr></thead><tbody>`;
     for(const [key,v] of allBookings){
       html+=`<tr><td>${v.dateStr}</td><td style="font-family:'DM Mono',monospace;">${v.time}</td>
-        <td>${v.bookerName||'—'}</td>
+        <td>${v.bookerName||'—'}<br><span style="font-size:11px;color:var(--text3);">${v.bookerEmail||''}</span></td>
         <td style="font-family:'DM Mono',monospace;font-size:11px;color:var(--text3);">${v.ref||'—'}</td>
         <td><button class="btn btn-sm btn-danger" onclick="cancelBooking('${key}')">Annulla</button></td></tr>`;
     }
