@@ -75,9 +75,14 @@ create index idx_slots_ref on public.booking_slots(ref);
 -- colonne non ci sono, nessuna configurazione di sicurezza potrebbe
 -- comunque esporle), non da un filtro di righe.
 -- ----------------------------------------------------------------------------
+-- email_notifiche e' inclusa: serve al browser del prenotante per passarla
+-- a EmailJS come destinatario della notifica al consulente (l'invio parte
+-- dal client, non c'e' un server intermedio). E' l'indirizzo di lavoro del
+-- consulente, non un dato del prenotante ne' un segreto come il pin.
 create view public.booking_calendars_public as
     select id, company_id, nome, color, duration_min, schedules, max_per_day, start_date, end_date,
-           (pin is not null) as ha_pin  -- rivela solo SE serve un pin, mai il suo valore
+           (pin is not null) as ha_pin,  -- rivela solo SE serve un pin, mai il suo valore
+           email_notifiche
     from public.booking_calendars;
 
 create view public.booking_slots_public as
