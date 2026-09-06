@@ -93,8 +93,16 @@ alter table public.booking_slots     enable row level security;
 -- Consulenti: stesso criterio di companies_read (admin o consultant_company)
 -- per i calendari aziendali; chiunque sia un utente attivo di app_users per
 -- il pool "Liberi Professionisti" (company_id null), come deciso in sessione.
+--
+-- "to authenticated" e' necessario, non opzionale: senza un ruolo esplicito
+-- la policy si applica di default anche ad anon, e Postgres deve VALUTARE
+-- la sua condizione per combinarla in OR con slots_public_insert anche
+-- quando anon sta solo facendo l'insert pubblico di prenotazione — la
+-- valutazione tocca consultant_company, su cui anon non ha mai avuto
+-- select, quindi fallisce con "permission denied for table
+-- consultant_company" invece di essere semplicemente scartata come falsa.
 create policy calendars_consultant_all on public.booking_calendars
-    for all using (
+    for all to authenticated using (
         public.is_admin()
         or (company_id is not null and exists (
             select 1 from public.consultant_company cc
@@ -115,9 +123,10 @@ create policy calendars_consultant_all on public.booking_calendars
         ))
     );
 
--- Slot: stesso criterio, applicato tramite il calendario padre.
+-- Slot: stesso criterio, applicato tramite il calendario padre. "to
+-- authenticated" per lo stesso motivo di calendars_consultant_all sopra.
 create policy slots_consultant_all on public.booking_slots
-    for all using (
+    for all to authenticated using (
         exists (
             select 1 from public.booking_calendars bc
             where bc.id = booking_slots.calendar_id and (
