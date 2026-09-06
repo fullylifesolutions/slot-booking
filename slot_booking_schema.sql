@@ -49,7 +49,9 @@ create table public.booking_slots (
     booker_email    text,
     note            text,
     booked_at       timestamptz,
-    ref             text unique,         -- codice di gestione/cancellazione mostrato al prenotante
+    client_code     text,                -- NON univoco: condiviso da tutte le prenotazioni dello stesso
+                                          -- cliente (un cliente prenota tipicamente 6+ slot), mostrato
+                                          -- al prenotante per gestirle/cancellarle tutte insieme
     blocked         boolean not null default false,
     created_at      timestamptz not null default now(),
     -- Il vincolo unique fa da lock anti-doppia-prenotazione: due insert
@@ -60,7 +62,7 @@ create table public.booking_slots (
     unique (calendar_id, data, ora)
 );
 create index idx_slots_calendar on public.booking_slots(calendar_id);
-create index idx_slots_ref on public.booking_slots(ref);
+create index idx_slots_client_code on public.booking_slots(client_code);
 
 -- ----------------------------------------------------------------------------
 -- Viste pubbliche: solo le colonne non sensibili, mai pin/booker_*.
@@ -169,7 +171,7 @@ create policy slots_public_insert on public.booking_slots
     for insert to anon, authenticated
     with check (
         booked = true
-        and ref is not null
+        and client_code is not null
         and booker_nome is not null
         and booker_cognome is not null
         and booker_email is not null
@@ -182,9 +184,14 @@ grant select, insert, update, delete on public.booking_calendars, public.booking
 
 -- ----------------------------------------------------------------------------
 -- Funzioni per operazioni pubbliche che richiedono dati sensibili:
--- verifica PIN (mai il valore, solo vero/falso), ricerca/cancellazione di
--- UNA prenotazione per codice di riferimento (mai una select libera sulla
--- tabella, che esporrebbe nome/email di tutti i prenotanti).
+-- verifica PIN (mai il valore, solo vero/falso), ricerca di TUTTE le
+-- prenotazioni di un cliente (un client_code raggruppa tipicamente 6+
+-- slot) e cancellazione di UNA riga specifica scelta dal cliente tra le
+-- sue — mai una select libera sulla tabella, che esporrebbe nome/email
+-- di tutti i prenotanti. cancella_prenotazione richiede sia l'id della
+-- riga sia il client_code corretto: sapere un id (uuid, non indovinabile
+-- per forza bruta) non basta da solo a cancellare la prenotazione di
+-- qualcun altro.
 -- ----------------------------------------------------------------------------
 create or replace function public.verifica_pin_calendario(p_calendar_id uuid, p_pin text)
 returns boolean
@@ -197,25 +204,27 @@ as $$
 $$;
 grant execute on function public.verifica_pin_calendario(uuid, text) to anon, authenticated;
 
-create or replace function public.trova_prenotazione(p_ref text)
+create or replace function public.trova_prenotazioni_cliente(p_client_code text)
 returns table(id uuid, calendar_id uuid, calendar_nome text, data date, ora time, booker_nome text, booker_cognome text)
 language sql security definer set search_path = public
 as $$
     select s.id, s.calendar_id, c.nome, s.data, s.ora, s.booker_nome, s.booker_cognome
     from public.booking_slots s
     join public.booking_calendars c on c.id = s.calendar_id
-    where s.ref = p_ref and s.booked = true;
+    where s.client_code = p_client_code and s.booked = true
+    order by s.data, s.ora;
 $$;
-grant execute on function public.trova_prenotazione(text) to anon, authenticated;
+grant execute on function public.trova_prenotazioni_cliente(text) to anon, authenticated;
 
-create or replace function public.cancella_prenotazione(p_ref text)
+create or replace function public.cancella_prenotazione(p_id uuid, p_client_code text)
 returns boolean
 language plpgsql security definer set search_path = public
 as $$
 declare
     v_id uuid;
 begin
-    select id into v_id from public.booking_slots where ref = p_ref and booked = true;
+    select id into v_id from public.booking_slots
+        where id = p_id and client_code = p_client_code and booked = true;
     if v_id is null then
         return false;
     end if;
@@ -223,7 +232,7 @@ begin
     return true;
 end;
 $$;
-grant execute on function public.cancella_prenotazione(text) to anon, authenticated;
+grant execute on function public.cancella_prenotazione(uuid, text) to anon, authenticated;
 
 -- ----------------------------------------------------------------------------
 -- Configurazione EmailJS (una riga sola) per le email di conferma prenotazione.

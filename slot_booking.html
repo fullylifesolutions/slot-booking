@@ -112,6 +112,10 @@ const bk={
 };
 
 function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,6); }
+// codice cliente: condiviso tra più prenotazioni dello stesso cliente (tipicamente 6+ slot),
+// salvato nel browser così le prenotazioni successive dallo stesso dispositivo si aggregano da sole.
+function getStoredClientCode(){ try{ return localStorage.getItem('fl_client_code')||''; }catch(e){ return ''; } }
+function setStoredClientCode(code){ try{ localStorage.setItem('fl_client_code', code); }catch(e){} }
 function toDateStr(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
 
 // parse URL params — "cal" al posto di "co": non è più l'id di un'azienda,
@@ -399,6 +403,11 @@ function renderStep3(el){
       <label class="form-label">Argomento / Note (opzionale)</label>
       <textarea class="form-input" id="bk-notes" placeholder="Es. Revisione contratto, aggiornamento piano..." style="min-height:70px;resize:vertical;font-size:13px;"></textarea>
     </div>
+    <div class="form-group">
+      <label class="form-label">Codice cliente</label>
+      <input type="text" class="form-input" id="bk-clientcode" style="font-family:'DM Mono',monospace;text-transform:uppercase;" placeholder="Lascia vuoto se è la tua prima prenotazione" value="${getStoredClientCode()}" />
+      <div style="font-size:11px;color:var(--text3);margin-top:4px;">Se hai già un codice da prenotazioni precedenti, inseriscilo per raggrupparle tutte insieme.</div>
+    </div>
     <button class="btn btn-primary" id="bk-confirm">Conferma prenotazione</button>`;
   el.querySelector('#back-s2').onclick=()=>{ bk.step=2; render(); };
   el.querySelector('#bk-confirm').onclick=confirmBooking;
@@ -420,7 +429,7 @@ function renderStep4(el){
         📅 ${d.dateStr} · 🕐 ${d.time} · ⏱ ${d.duration} min
       </div>
       ${d.emailOk?`<div style="margin-top:12px;font-size:12px;color:var(--green);">✓ Email di conferma inviata</div>`:''}
-      <div class="confirm-ref">Codice riferimento: <strong>${d.ref}</strong><br><span style="font-size:11px;color:var(--text3);">Conservalo per modificare la prenotazione</span></div>
+      <div class="confirm-ref">Il tuo codice cliente: <strong>${d.clientCode}</strong><br><span style="font-size:11px;color:var(--text3);">Usalo per gestire tutte le tue prenotazioni, anche quelle future</span></div>
     </div>
     <button class="btn" style="width:100%;margin-top:16px;" id="btn-new">Effettua un'altra prenotazione</button>`;
   el.querySelector('#btn-new').onclick=async()=>{
@@ -430,49 +439,50 @@ function renderStep4(el){
   };
 }
 
-// ── MANAGE BOOKING (cancella e riprenota) ─────────────────────────────────
+// ── MANAGE BOOKING (elenca e cancella le prenotazioni di un cliente) ──────
 function buildManageSection(){
   const div=document.createElement('div'); div.className='manage-box';
   div.innerHTML=`
-    <div class="manage-title">Hai già una prenotazione?</div>
-    <div class="manage-sub">Inserisci il codice di riferimento per cancellarla e prenotarne una nuova.</div>
+    <div class="manage-title">Le tue prenotazioni</div>
+    <div class="manage-sub">Inserisci il tuo codice cliente per vedere ed eventualmente cancellare le prenotazioni collegate.</div>
     <div class="form-group" style="margin-bottom:10px;">
-      <input type="text" class="form-input" id="manage-ref" placeholder="Es. A1B2C3D4" style="font-family:'DM Mono',monospace;text-transform:uppercase;" />
+      <input type="text" class="form-input" id="manage-code" placeholder="Es. A1B2C3D4" style="font-family:'DM Mono',monospace;text-transform:uppercase;" value="${getStoredClientCode()}" />
     </div>
-    <button class="btn" style="width:100%;padding:10px;" id="manage-find-btn">Cerca prenotazione</button>
+    <button class="btn" style="width:100%;padding:10px;" id="manage-find-btn">Cerca prenotazioni</button>
     <div id="manage-result" style="margin-top:12px;"></div>`;
-  const input=div.querySelector('#manage-ref');
+  const input=div.querySelector('#manage-code');
   const btn=div.querySelector('#manage-find-btn');
   const result=div.querySelector('#manage-result');
-  btn.onclick=async()=>{
-    const ref=input.value.trim().toUpperCase();
-    if(!ref){ showToast('Inserisci il codice','error'); return; }
+  const doSearch=async()=>{
+    const code=input.value.trim().toUpperCase();
+    if(!code){ showToast('Inserisci il codice','error'); return; }
     btn.disabled=true; btn.textContent='Ricerca...';
-    const{data,error}=await sb.rpc('trova_prenotazione',{p_ref:ref});
-    btn.disabled=false; btn.textContent='Cerca prenotazione';
+    const{data,error}=await sb.rpc('trova_prenotazioni_cliente',{p_client_code:code});
+    btn.disabled=false; btn.textContent='Cerca prenotazioni';
     if(error||!data||!data.length){ result.innerHTML=`<div style="font-size:12px;color:var(--red);text-align:center;">Nessuna prenotazione trovata con questo codice.</div>`; return; }
-    const found=data[0];
-    result.innerHTML=`
-      <div class="booking-found-box">
-        <div class="booking-found-title">Prenotazione trovata</div>
-        <div class="booking-found-detail"><strong>${found.booker_nome} ${found.booker_cognome}</strong><br>${found.calendar_nome} — ${found.data} alle ${String(found.ora).slice(0,5)}</div>
-      </div>
-      <button class="btn btn-danger" id="cancel-booking-btn">Cancella questa prenotazione</button>`;
-    result.querySelector('#cancel-booking-btn').onclick=async()=>{
-      if(!confirm('Confermi la cancellazione? Potrai prenotare un nuovo slot.'))return;
-      const{data:ok}=await sb.rpc('cancella_prenotazione',{p_ref:ref});
-      if(!ok){ showToast('Errore nella cancellazione','error'); return; }
-      showToast('Prenotazione cancellata','success');
-      result.innerHTML=`<div style="font-size:12px;color:var(--green);text-align:center;">✓ Cancellata. Ora puoi prenotare un nuovo slot.</div>`;
-      input.value='';
-      if(bk.selectedCal&&found.calendar_id===bk.selectedCal.id){
-        await loadSlots(bk.selectedCal.id);
-        const el=document.getElementById('step-content');
-        if(el&&bk.step===2) renderStep2(el);
-      }
-    };
+    result.innerHTML = data.map(b=>`
+      <div class="booking-found-box" style="margin-bottom:10px;">
+        <div class="booking-found-title">${b.calendar_nome}</div>
+        <div class="booking-found-detail"><strong>${b.booker_nome} ${b.booker_cognome}</strong><br>${b.data} alle ${String(b.ora).slice(0,5)}</div>
+        <button class="btn btn-danger" style="margin-top:8px;padding:8px;width:100%;" data-cancel="${b.id}" data-calid="${b.calendar_id}">Cancella questa prenotazione</button>
+      </div>`).join('');
+    result.querySelectorAll('[data-cancel]').forEach(cbtn=>{
+      cbtn.addEventListener('click', async()=>{
+        if(!confirm('Confermi la cancellazione di questo slot?'))return;
+        const{data:ok}=await sb.rpc('cancella_prenotazione',{p_id:cbtn.dataset.cancel, p_client_code:code});
+        if(!ok){ showToast('Errore nella cancellazione','error'); return; }
+        showToast('Prenotazione cancellata','success');
+        if(bk.selectedCal && cbtn.dataset.calid===bk.selectedCal.id){
+          await loadSlots(bk.selectedCal.id);
+          const stepEl=document.getElementById('step-content');
+          if(stepEl&&bk.step===2) renderStep2(stepEl);
+        }
+        doSearch();
+      });
+    });
   };
-  input.addEventListener('keydown',e=>{ if(e.key==='Enter') btn.click(); });
+  btn.onclick=doSearch;
+  input.addEventListener('keydown',e=>{ if(e.key==='Enter') doSearch(); });
   return div;
 }
 
@@ -483,6 +493,7 @@ async function confirmBooking(){
   const ln=el.querySelector('#bk-ln').value.trim();
   const email=el.querySelector('#bk-email').value.trim();
   const notes=el.querySelector('#bk-notes').value.trim();
+  const manualCode=el.querySelector('#bk-clientcode').value.trim().toUpperCase();
   if(!fn||!ln){ showToast('Inserisci nome e cognome','error'); return; }
   if(!email||!email.includes('@')){ showToast('Inserisci un’email valida','error'); return; }
   const btn=el.querySelector('#bk-confirm');
@@ -491,13 +502,16 @@ async function confirmBooking(){
   const parts=bk.selectedSlotKey.split('_');
   const dateStr=parts[1], time=parts[2];
   const fullName=fn+' '+ln;
-  const ref=uid().toUpperCase();
+  // riusa il codice inserito o quello già salvato sul dispositivo; solo se
+  // è davvero la prima prenotazione in assoluto ne genera uno nuovo.
+  const clientCode = manualCode || getStoredClientCode() || uid().toUpperCase();
+  setStoredClientCode(clientCode);
   const cal=bk.selectedCal;
 
   const{error}=await sb.from('booking_slots').insert({
     calendar_id:cal.id, data:dateStr, ora:time, booked:true,
     booker_nome:fn, booker_cognome:ln, booker_email:email, note:notes,
-    booked_at:new Date().toISOString(), ref
+    booked_at:new Date().toISOString(), client_code:clientCode
   });
   if(error){
     // unique(calendar_id,data,ora): se qualcun altro ha prenotato nel
@@ -514,7 +528,7 @@ async function confirmBooking(){
   if(cfg.pubkey&&cfg.service_id){
     const [dy,dm,dd]=dateStr.split('-');
     const bookingDateFormatted=dd+'/'+dm+'/'+dy;
-    const params={company_name:cal.nome,booking_date:bookingDateFormatted,booking_time:time,duration:cal.duration_min,booker_name:fullName,ref_code:ref,booking_notes:notes||'Nessuna nota',consultant_email:cal.email_notifiche||''};
+    const params={company_name:cal.nome,booking_date:bookingDateFormatted,booking_time:time,duration:cal.duration_min,booker_name:fullName,ref_code:clientCode,booking_notes:notes||'Nessuna nota',consultant_email:cal.email_notifiche||''};
     try{
       const promises=[];
       if(cfg.tpl_client&&email) promises.push(emailjs.send(cfg.service_id,cfg.tpl_client,{...params,to_email:email,to_name:fullName}));
@@ -523,7 +537,7 @@ async function confirmBooking(){
     }catch(e){ console.warn('EmailJS:',e); }
   }
 
-  bk.confirmData={fullName,dateStr,time,ref,emailOk,calName:cal.nome,duration:cal.duration_min};
+  bk.confirmData={fullName,dateStr,time,clientCode,emailOk,calName:cal.nome,duration:cal.duration_min};
   bk.step=4; render();
 }
 
