@@ -116,6 +116,16 @@ function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(
 // salvato nel browser così le prenotazioni successive dallo stesso dispositivo si aggregano da sole.
 function getStoredClientCode(){ try{ return localStorage.getItem('fl_client_code')||''; }catch(e){ return ''; } }
 function setStoredClientCode(code){ try{ localStorage.setItem('fl_client_code', code); }catch(e){} }
+// dati anagrafici del prenotante: ricordati sul dispositivo così alla
+// seconda prenotazione (tipico: 6+ slot per cliente) non serve riscriverli.
+function getStoredBookerInfo(){
+  try{ return { nome:localStorage.getItem('fl_booker_nome')||'', cognome:localStorage.getItem('fl_booker_cognome')||'', email:localStorage.getItem('fl_booker_email')||'' }; }
+  catch(e){ return {nome:'',cognome:'',email:''}; }
+}
+function setStoredBookerInfo(nome,cognome,email){
+  try{ localStorage.setItem('fl_booker_nome',nome); localStorage.setItem('fl_booker_cognome',cognome); localStorage.setItem('fl_booker_email',email); }catch(e){}
+}
+function escAttr(s){ return String(s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;'); }
 function toDateStr(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
 
 // parse URL params — "cal" al posto di "co": non è più l'id di un'azienda,
@@ -379,6 +389,7 @@ function renderStep2(el){
 function renderStep3(el){
   const parts=bk.selectedSlotKey.split('_');
   const dateStr=parts[1], time=parts[2];
+  const booker=getStoredBookerInfo();
   el.innerHTML=`
     <button class="back-btn" id="back-s2">← Torna agli slot</button>
     <div class="sec-title">I tuoi dati</div>
@@ -389,15 +400,15 @@ function renderStep3(el){
     </div>
     <div class="form-group">
       <label class="form-label">Nome</label>
-      <input type="text" class="form-input" id="bk-fn" placeholder="Mario" autocomplete="given-name" />
+      <input type="text" class="form-input" id="bk-fn" placeholder="Mario" autocomplete="given-name" value="${escAttr(booker.nome)}" />
     </div>
     <div class="form-group">
       <label class="form-label">Cognome</label>
-      <input type="text" class="form-input" id="bk-ln" placeholder="Rossi" autocomplete="family-name" />
+      <input type="text" class="form-input" id="bk-ln" placeholder="Rossi" autocomplete="family-name" value="${escAttr(booker.cognome)}" />
     </div>
     <div class="form-group">
       <label class="form-label">Email</label>
-      <input type="email" class="form-input" id="bk-email" placeholder="mario.rossi@azienda.com" autocomplete="email" />
+      <input type="email" class="form-input" id="bk-email" placeholder="mario.rossi@azienda.com" autocomplete="email" value="${escAttr(booker.email)}" />
     </div>
     <div class="form-group">
       <label class="form-label">Argomento / Note (opzionale)</label>
@@ -405,7 +416,7 @@ function renderStep3(el){
     </div>
     <div class="form-group">
       <label class="form-label">Codice cliente</label>
-      <input type="text" class="form-input" id="bk-clientcode" style="font-family:'DM Mono',monospace;text-transform:uppercase;" placeholder="Lascia vuoto se è la tua prima prenotazione" value="${getStoredClientCode()}" />
+      <input type="text" class="form-input" id="bk-clientcode" style="font-family:'DM Mono',monospace;text-transform:uppercase;" placeholder="Lascia vuoto se è la tua prima prenotazione" value="${escAttr(getStoredClientCode())}" />
       <div style="font-size:11px;color:var(--text3);margin-top:4px;">Se hai già un codice da prenotazioni precedenti, inseriscilo per raggrupparle tutte insieme.</div>
     </div>
     <button class="btn btn-primary" id="bk-confirm">Conferma prenotazione</button>`;
@@ -446,7 +457,7 @@ function buildManageSection(){
     <div class="manage-title">Le tue prenotazioni</div>
     <div class="manage-sub">Inserisci il tuo codice cliente per vedere ed eventualmente cancellare le prenotazioni collegate.</div>
     <div class="form-group" style="margin-bottom:10px;">
-      <input type="text" class="form-input" id="manage-code" placeholder="Es. A1B2C3D4" style="font-family:'DM Mono',monospace;text-transform:uppercase;" value="${getStoredClientCode()}" />
+      <input type="text" class="form-input" id="manage-code" placeholder="Es. A1B2C3D4" style="font-family:'DM Mono',monospace;text-transform:uppercase;" value="${escAttr(getStoredClientCode())}" />
     </div>
     <button class="btn" style="width:100%;padding:10px;" id="manage-find-btn">Cerca prenotazioni</button>
     <div id="manage-result" style="margin-top:12px;"></div>`;
@@ -506,6 +517,7 @@ async function confirmBooking(){
   // è davvero la prima prenotazione in assoluto ne genera uno nuovo.
   const clientCode = manualCode || getStoredClientCode() || uid().toUpperCase();
   setStoredClientCode(clientCode);
+  setStoredBookerInfo(fn,ln,email);
   const cal=bk.selectedCal;
 
   const{error}=await sb.from('booking_slots').insert({
