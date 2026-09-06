@@ -92,115 +92,90 @@ body{font-family:'Sora',sans-serif;background:var(--bg);color:var(--text);min-he
 <div class="main" id="main"><div class="loading">Caricamento...</div></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
-<script type="module">
-import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
-import { getFirestore, collection, doc, setDoc, getDoc, getDocs, deleteDoc, onSnapshot, query, where }
-  from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
-
-const firebaseConfig = {
-  apiKey: "AIzaSyDvQK_iTYkuzqjqiNAn_-I_Ec-DDfGEwAo",
-  authDomain: "slot-booking-9baeb.firebaseapp.com",
-  projectId: "slot-booking-9baeb",
-  storageBucket: "slot-booking-9baeb.firebasestorage.app",
-  messagingSenderId: "651795993983",
-  appId: "1:651795993983:web:5168157edeecd398a7f64a"
-};
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script>
+const SUPABASE_URL = "https://rronmtbpvhetoiddynmz.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJyb25tdGJwdmhldG9pZGR5bm16Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA4NDA4NzEsImV4cCI6MjA5NjQxNjg3MX0.MVqdH3aTlXWukzZCbv171uaqiiF3n6wmK3KfYoitlpA";
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 const DAYS_IT=['','Lunedì','Martedì','Mercoledì','Giovedì','Venerdì','Sabato','Domenica'];
 const MONTHS_IT=['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
 
 // ── STATE ─────────────────────────────────────────────────────────────────
 const bk={
-  step:1, // 1=company|pin, 2=slot, 3=form, 4=confirm
-  companies:[], slots:{}, config:{},
-  selectedCo:null, selectedSlotKey:null,
+  step:1, // 1=calendario|pin, 2=slot, 3=form, 4=confirm
+  calendars:[], slots:{}, config:{},
+  selectedCal:null, selectedSlotKey:null,
   weekOffset:0, minWeekOffset:0,
-  unsubSlots:null, confirmData:null,
+  confirmData:null,
   pinVerified:false
 };
 
 function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,6); }
 function toDateStr(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
 
-// parse URL params
+// parse URL params — "cal" al posto di "co": non è più l'id di un'azienda,
+// è l'id del calendario (booking_calendars.id), che può anche essere il
+// pool condiviso "Liberi Professionisti" (nessuna azienda dietro).
 const urlParams = new URLSearchParams(window.location.search);
-const urlCoId = urlParams.get('co');
+const urlCalId = urlParams.get('cal');
 const urlPin = urlParams.get('pin');
 
 // ── INIT ──────────────────────────────────────────────────────────────────
 async function init(){
-  const [coSnap, cfgSnap] = await Promise.all([
-    getDocs(collection(db,'companies')),
-    getDoc(doc(db,'config','emailjs'))
+  const [calRes, cfgRes] = await Promise.all([
+    sb.from('booking_calendars_public').select('*'),
+    sb.from('booking_email_config').select('*').eq('id',1).single()
   ]);
-  bk.companies = coSnap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>a.name.localeCompare(b.name));
-  if(cfgSnap.exists()){ bk.config=cfgSnap.data(); if(bk.config.pubkey) emailjs.init(bk.config.pubkey); }
+  bk.calendars = (calRes.data||[]).slice().sort((a,b)=>a.nome.localeCompare(b.nome));
+  if(cfgRes.data){ bk.config=cfgRes.data; if(bk.config.pubkey) emailjs.init(bk.config.pubkey); }
 
-  // direct link: preselect company
-  if(urlCoId){
-    const co = bk.companies.find(c=>c.id===urlCoId);
-    if(co){
-      bk.selectedCo=co;
-      // check PIN
-      if(co.pin && urlPin !== co.pin){
-        bk.step='pin';
-        bk.pinVerified=false;
+  // direct link: preselect calendar
+  if(urlCalId){
+    const cal = bk.calendars.find(c=>c.id===urlCalId);
+    if(cal){
+      bk.selectedCal=cal;
+      if(cal.ha_pin){
+        // verifica il pin passato in URL lato server, non lo confrontiamo mai in locale
+        const{data:pinOk}=await sb.rpc('verifica_pin_calendario',{p_calendar_id:cal.id,p_pin:urlPin||''});
+        if(pinOk){ bk.pinVerified=true; bk.step=2; autoWeekOffset(cal); await loadSlots(cal.id); }
+        else { bk.step='pin'; bk.pinVerified=false; }
       } else {
-        bk.pinVerified=true;
-        bk.step=2;
-        autoWeekOffset(co);
-        subscribeSlots(co.id);
+        bk.pinVerified=true; bk.step=2; autoWeekOffset(cal); await loadSlots(cal.id);
       }
     }
   }
   render();
 }
 
-function autoWeekOffset(co){
+function autoWeekOffset(cal){
   bk.weekOffset=0; bk.expired=false;
   let found=false;
   for(let w=0;w<52;w++){
-    if(getAvailableDates(co,w).length>0){ bk.weekOffset=w; found=true; break; }
-    // if all weeks exceed endDate, stop
-    if(co.endDate){
+    if(getAvailableDates(cal,w).length>0){ bk.weekOffset=w; found=true; break; }
+    if(cal.end_date){
       const now=new Date(), todayDow=now.getDay()||7;
       const monday=new Date(now); monday.setDate(now.getDate()-todayDow+1+w*7);
-      if(toDateStr(monday) > co.endDate){ break; }
+      if(toDateStr(monday) > cal.end_date){ break; }
     }
   }
   if(!found) bk.expired=true;
   bk.minWeekOffset=bk.weekOffset;
 }
 
-// ── REALTIME SLOTS ────────────────────────────────────────────────────────
-function subscribeSlots(coId){
-  if(bk.unsubSlots){ bk.unsubSlots(); bk.unsubSlots=null; }
+// ── SLOTS (ricaricati ad ogni azione/navigazione: niente sottoscrizione
+//    realtime multi-tenant qui, un refresh puntuale basta per questo volume) ──
+async function loadSlots(calId){
+  const{data,error}=await sb.from('booking_slots_public').select('*').eq('calendar_id',calId);
   bk.slots={};
-  const q=query(collection(db,'slots'),where('coId','==',coId));
-  bk.unsubSlots=onSnapshot(q,snap=>{
-    let changed=false;
-    snap.docChanges().forEach(ch=>{
-      changed=true;
-      if(ch.type==='removed') delete bk.slots[ch.doc.id];
-      else bk.slots[ch.doc.id]=ch.doc.data();
-    });
-    if(!changed)return;
-    if(bk.step===2){
-      setTimeout(()=>{
-        const el=document.getElementById('step-content');
-        if(el) renderStep2(el);
-      },50);
-    }
-  });
+  if(!error) (data||[]).forEach(s=>{ bk.slots[calId+'_'+s.data+'_'+s.ora.slice(0,5)]=s; });
 }
 
 // ── SLOT GENERATION ───────────────────────────────────────────────────────
-function getAvailableDates(co, weekOffset){
+function getAvailableDates(cal, weekOffset){
   const now=new Date(), todayDow=now.getDay()||7;
   const monday=new Date(now); monday.setDate(now.getDate()-todayDow+1+weekOffset*7);
-  const days=(co.schedules||[]).map(s=>s.day);
+  const days=(cal.schedules||[]).map(s=>s.day);
   const todayStr=toDateStr(now);
   const dates=[];
   for(let i=0;i<7;i++){
@@ -208,35 +183,34 @@ function getAvailableDates(co, weekOffset){
     const ds=toDateStr(d);
     if(!days.includes(d.getDay()||7)) continue;
     if(ds < todayStr) continue;
-    if(co.startDate && ds < co.startDate) continue;
-    if(co.endDate && ds > co.endDate) continue;
+    if(cal.start_date && ds < cal.start_date) continue;
+    if(cal.end_date && ds > cal.end_date) continue;
     dates.push(d);
   }
   return dates;
 }
 
-function generateSlots(co, date){
+function generateSlots(cal, date){
   const dateStr=toDateStr(date);
   const dayNum=date.getDay()||7;
-  const sched=(co.schedules||[]).find(s=>s.day===dayNum);
+  const sched=(cal.schedules||[]).find(s=>s.day===dayNum);
   if(!sched)return[];
   const slots=[];
   for(const range of sched.ranges){
     const [sh,sm]=range.start.split(':').map(Number);
     const [eh,em]=range.end.split(':').map(Number);
-    for(let m=sh*60+sm; m+co.duration<=eh*60+em; m+=co.duration){
+    for(let m=sh*60+sm; m+cal.duration_min<=eh*60+em; m+=cal.duration_min){
       const hh=String(Math.floor(m/60)).padStart(2,'0'), mm=String(m%60).padStart(2,'0');
-      const key=co.id+'_'+dateStr+'_'+hh+':'+mm;
+      const key=cal.id+'_'+dateStr+'_'+hh+':'+mm;
       const data=bk.slots[key]||{};
       if(data.blocked)continue;
-      slots.push({key, time:hh+':'+mm, dateStr, booked:!!data.booked, bookerName:data.bookerName||''});
+      slots.push({key, time:hh+':'+mm, dateStr, booked:!!data.booked});
     }
   }
-  // apply maxPerDay limit: count booked, mark excess as blocked visually
-  if(co.maxPerDay){
+  if(cal.max_per_day){
     let bookedCount=slots.filter(s=>s.booked).length;
     return slots.map(s=>{
-      if(!s.booked && bookedCount>=co.maxPerDay) return {...s, booked:true, maxReached:true};
+      if(!s.booked && bookedCount>=cal.max_per_day) return {...s, booked:true, maxReached:true};
       if(s.booked) bookedCount++;
       return s;
     });
@@ -249,7 +223,7 @@ function render(){
   const main=document.getElementById('main');
   if(bk.step==='pin'){ renderPinScreen(main); return; }
 
-  const stepLabels=['Azienda','Slot','Dati','Conferma'];
+  const stepLabels=['Calendario','Slot','Dati','Conferma'];
   let html='<div class="steps">';
   stepLabels.forEach((lbl,i)=>{
     const n=i+1, cls=n<bk.step?'done':n===bk.step?'active':'', icon=n<bk.step?'✓':n;
@@ -268,13 +242,13 @@ function render(){
 
 // PIN SCREEN
 function renderPinScreen(main){
-  const co=bk.selectedCo;
+  const cal=bk.selectedCal;
   main.innerHTML=`
     <div style="display:flex;align-items:center;justify-content:center;min-height:60vh;">
       <div class="pin-box">
         <div style="font-size:32px;margin-bottom:12px;">🔒</div>
-        <div style="font-size:18px;font-weight:600;margin-bottom:6px;">${co.name}</div>
-        <div style="font-size:13px;color:var(--text2);margin-bottom:24px;">Inserisci il codice di accesso fornito dalla tua azienda.</div>
+        <div style="font-size:18px;font-weight:600;margin-bottom:6px;">${cal.nome}</div>
+        <div style="font-size:13px;color:var(--text2);margin-bottom:24px;">Inserisci il codice di accesso fornito dal tuo consulente.</div>
         <div class="form-group" style="text-align:left;">
           <label class="form-label">Codice accesso</label>
           <input type="text" class="form-input" id="pin-input" placeholder="Es. ACME2024" autocomplete="off" />
@@ -286,10 +260,13 @@ function renderPinScreen(main){
   const input=main.querySelector('#pin-input');
   const btn=main.querySelector('#pin-btn');
   const err=main.querySelector('#pin-error');
-  const checkPin=()=>{
-    if(input.value.trim()===co.pin){
+  const checkPin=async()=>{
+    btn.disabled=true;
+    const{data:ok}=await sb.rpc('verifica_pin_calendario',{p_calendar_id:cal.id,p_pin:input.value.trim()});
+    btn.disabled=false;
+    if(ok){
       bk.pinVerified=true; bk.step=2;
-      autoWeekOffset(co); subscribeSlots(co.id); render();
+      autoWeekOffset(cal); await loadSlots(cal.id); render();
     } else {
       err.style.display='block'; input.value=''; input.focus();
     }
@@ -299,52 +276,49 @@ function renderPinScreen(main){
   setTimeout(()=>input.focus(),50);
 }
 
-// STEP 1: company list (only shown when no ?co= param)
+// STEP 1: calendar list (only shown when no ?cal= param)
 function renderStep1(el){
-  el.innerHTML=`<div class="sec-title">Seleziona la tua azienda</div>
-    <div class="sec-sub">Scegli l'azienda per cui vuoi prenotare.</div>`;
-  // Only show companies without PIN (or let user select and then ask PIN)
-  bk.companies.forEach(co=>{
+  el.innerHTML=`<div class="sec-title">Seleziona il calendario</div>
+    <div class="sec-sub">Scegli l'azienda (o "Liberi Professionisti") per cui vuoi prenotare.</div>`;
+  bk.calendars.forEach(cal=>{
     const div=document.createElement('div'); div.className='card';
-    const days=(co.schedules||[]).map(s=>DAYS_IT[s.day]).join(', ');
+    const days=(cal.schedules||[]).map(s=>DAYS_IT[s.day]).join(', ');
     div.innerHTML=`<div style="display:flex;align-items:center;gap:12px;">
-      <div style="width:12px;height:12px;border-radius:50%;background:${co.color};flex-shrink:0;"></div>
-      <div><div class="card-title">${co.name}</div>
-      <div class="card-sub">${days} · ${co.duration} min${co.pin?' · 🔒 Codice richiesto':''}</div></div>
+      <div style="width:12px;height:12px;border-radius:50%;background:${cal.color};flex-shrink:0;"></div>
+      <div><div class="card-title">${cal.nome}</div>
+      <div class="card-sub">${days} · ${cal.duration_min} min${cal.ha_pin?' · 🔒 Codice richiesto':''}</div></div>
     </div>`;
-    div.onclick=()=>{
-      bk.selectedCo=co; bk.slots={};
-      if(co.pin){
+    div.onclick=async()=>{
+      bk.selectedCal=cal; bk.slots={};
+      if(cal.ha_pin){
         bk.step='pin'; render();
       } else {
-        bk.step=2; autoWeekOffset(co);
-        render(); subscribeSlots(co.id);
+        bk.step=2; autoWeekOffset(cal);
+        await loadSlots(cal.id); render();
       }
     };
     el.appendChild(div);
   });
-
-  // Manage booking section
   el.appendChild(buildManageSection());
 }
 
 // STEP 2: slot picker
 function renderStep2(el){
-  const co=bk.selectedCo;
-  const dates=getAvailableDates(co,bk.weekOffset);
+  const cal=bk.selectedCal;
+  const dates=getAvailableDates(cal,bk.weekOffset);
   const now=new Date(), todayDow=now.getDay()||7;
   const monday=new Date(now); monday.setDate(now.getDate()-todayDow+1+bk.weekOffset*7);
   const sunday=new Date(monday); sunday.setDate(monday.getDate()+6);
   const weekLabel=monday.getDate()+' '+MONTHS_IT[monday.getMonth()].slice(0,3)+' – '+sunday.getDate()+' '+MONTHS_IT[sunday.getMonth()].slice(0,3);
-  const days=(co.schedules||[]).map(s=>DAYS_IT[s.day]).join(', ');
+  const days=(cal.schedules||[]).map(s=>DAYS_IT[s.day]).join(', ');
 
   el.innerHTML=`
-    ${!urlCoId?'<button class="back-btn" id="back-s1">← Cambia azienda</button>':''}
-    <div class="sec-title">Scegli uno slot <span class="rt-badge"><span class="rt-dot"></span>live</span></div>
+    ${!urlCalId?'<button class="back-btn" id="back-s1">← Cambia calendario</button>':''}
+    <div class="sec-title">Scegli uno slot</div>
     <div class="summary-bar">
-      <div class="summary-item"><strong>${co.name}</strong></div>
+      <div class="summary-item"><strong>${cal.nome}</strong></div>
       <div class="summary-item">${days}</div>
-      <div class="summary-item">Slot da <strong>${co.duration} min</strong></div>
+      <div class="summary-item">Slot da <strong>${cal.duration_min} min</strong></div>
     </div>
     <div class="week-nav">
       <button class="nav-btn" id="nav-prev" ${bk.weekOffset<=bk.minWeekOffset?'disabled':''}>‹ Prec</button>
@@ -354,23 +328,23 @@ function renderStep2(el){
     <div id="slots-area"></div>
     <div id="continue-wrap"></div>`;
 
-  if(!urlCoId){ const b=el.querySelector('#back-s1'); if(b) b.onclick=()=>{ bk.step=1; if(bk.unsubSlots){bk.unsubSlots();bk.unsubSlots=null;} render(); }; }
+  if(!urlCalId){ const b=el.querySelector('#back-s1'); if(b) b.onclick=()=>{ bk.step=1; render(); }; }
   const prevBtn=el.querySelector('#nav-prev'), nextBtn=el.querySelector('#nav-next');
-  if(prevBtn) prevBtn.onclick=()=>{ bk.weekOffset--; renderStep2(el); };
-  if(nextBtn) nextBtn.onclick=()=>{ bk.weekOffset++; renderStep2(el); };
+  if(prevBtn) prevBtn.onclick=async()=>{ bk.weekOffset--; await loadSlots(cal.id); renderStep2(el); };
+  if(nextBtn) nextBtn.onclick=async()=>{ bk.weekOffset++; await loadSlots(cal.id); renderStep2(el); };
 
   const area=el.querySelector('#slots-area');
   if(bk.expired){
     area.innerHTML=`<div style="text-align:center;padding:40px 20px;">
       <div style="font-size:32px;margin-bottom:12px;">📅</div>
       <div style="font-size:15px;font-weight:600;margin-bottom:8px;">Disponibilità terminata</div>
-      <div style="font-size:13px;color:var(--text3);">Non ci sono più slot disponibili per questa azienda.<br>Contatta il consulente per informazioni.</div>
+      <div style="font-size:13px;color:var(--text3);">Non ci sono più slot disponibili per questo calendario.<br>Contatta il consulente per informazioni.</div>
     </div>`;
   } else if(!dates.length){
     area.innerHTML='<div style="text-align:center;padding:30px;color:var(--text3);font-size:13px;">Nessuna data questa settimana. Prova quella successiva.</div>';
   } else {
     dates.forEach(date=>{
-      const slots=generateSlots(co,date);
+      const slots=generateSlots(cal,date);
       const free=slots.filter(s=>!s.booked).length;
       const sec=document.createElement('div'); sec.style.marginBottom='24px';
       sec.innerHTML=`<div style="font-size:13px;font-weight:500;color:var(--text2);margin-bottom:12px;">
@@ -393,15 +367,8 @@ function renderStep2(el){
         if(wrap){ wrap.innerHTML=`<button class="btn btn-primary" id="btn-cont">Continua →</button>`; wrap.querySelector('#btn-cont').onclick=()=>{ bk.step=3; render(); }; }
       });
     });
-    if(bk.selectedSlotKey){
-      const wrap=el.querySelector('#continue-wrap');
-      if(wrap&&!wrap.innerHTML.trim()){ wrap.innerHTML=`<button class="btn btn-primary" id="btn-cont2">Continua →</button>`; wrap.querySelector('#btn-cont2').onclick=()=>{ bk.step=3; render(); }; }
-    }
   }
-
-  // manage section at bottom
-  const manage=buildManageSection();
-  el.appendChild(manage);
+  el.appendChild(buildManageSection());
 }
 
 // STEP 3: personal data
@@ -412,9 +379,9 @@ function renderStep3(el){
     <button class="back-btn" id="back-s2">← Torna agli slot</button>
     <div class="sec-title">I tuoi dati</div>
     <div class="summary-bar">
-      <div class="summary-item"><strong>${bk.selectedCo.name}</strong></div>
+      <div class="summary-item"><strong>${bk.selectedCal.nome}</strong></div>
       <div class="summary-item">📅 <strong>${dateStr}</strong> ore <strong>${time}</strong></div>
-      <div class="summary-item">⏱ <strong>${bk.selectedCo.duration} min</strong></div>
+      <div class="summary-item">⏱ <strong>${bk.selectedCal.duration_min} min</strong></div>
     </div>
     <div class="form-group">
       <label class="form-label">Nome</label>
@@ -449,14 +416,18 @@ function renderStep4(el){
       <div class="confirm-icon">✅</div>
       <div class="confirm-title">Prenotazione confermata!</div>
       <div class="confirm-detail">
-        <strong>${d.fullName}</strong><br>${d.coName}<br><br>
+        <strong>${d.fullName}</strong><br>${d.calName}<br><br>
         📅 ${d.dateStr} · 🕐 ${d.time} · ⏱ ${d.duration} min
       </div>
       ${d.emailOk?`<div style="margin-top:12px;font-size:12px;color:var(--green);">✓ Email di conferma inviata</div>`:''}
       <div class="confirm-ref">Codice riferimento: <strong>${d.ref}</strong><br><span style="font-size:11px;color:var(--text3);">Conservalo per modificare la prenotazione</span></div>
     </div>
     <button class="btn" style="width:100%;margin-top:16px;" id="btn-new">Effettua un'altra prenotazione</button>`;
-  el.querySelector('#btn-new').onclick=()=>{ bk.step=urlCoId?2:1; bk.selectedSlotKey=null; bk.confirmData=null; if(!urlCoId&&bk.unsubSlots){bk.unsubSlots();bk.unsubSlots=null;} if(urlCoId) autoWeekOffset(bk.selectedCo); render(); };
+  el.querySelector('#btn-new').onclick=async()=>{
+    bk.step=urlCalId?2:1; bk.selectedSlotKey=null; bk.confirmData=null;
+    if(urlCalId){ autoWeekOffset(bk.selectedCal); await loadSlots(bk.selectedCal.id); }
+    render();
+  };
 }
 
 // ── MANAGE BOOKING (cancella e riprenota) ─────────────────────────────────
@@ -477,26 +448,25 @@ function buildManageSection(){
     const ref=input.value.trim().toUpperCase();
     if(!ref){ showToast('Inserisci il codice','error'); return; }
     btn.disabled=true; btn.textContent='Ricerca...';
-    // search across all slots for this ref
-    const snap=await getDocs(query(collection(db,'slots'),where('ref','==',ref)));
+    const{data,error}=await sb.rpc('trova_prenotazione',{p_ref:ref});
     btn.disabled=false; btn.textContent='Cerca prenotazione';
-    if(snap.empty){ result.innerHTML=`<div style="font-size:12px;color:var(--red);text-align:center;">Nessuna prenotazione trovata con questo codice.</div>`; return; }
-    const slotDoc=snap.docs[0]; const slotData=slotDoc.data();
+    if(error||!data||!data.length){ result.innerHTML=`<div style="font-size:12px;color:var(--red);text-align:center;">Nessuna prenotazione trovata con questo codice.</div>`; return; }
+    const found=data[0];
     result.innerHTML=`
       <div class="booking-found-box">
         <div class="booking-found-title">Prenotazione trovata</div>
-        <div class="booking-found-detail"><strong>${slotData.bookerName}</strong><br>${slotData.dateStr} alle ${slotData.time}</div>
+        <div class="booking-found-detail"><strong>${found.booker_nome} ${found.booker_cognome}</strong><br>${found.calendar_nome} — ${found.data} alle ${String(found.ora).slice(0,5)}</div>
       </div>
       <button class="btn btn-danger" id="cancel-booking-btn">Cancella questa prenotazione</button>`;
     result.querySelector('#cancel-booking-btn').onclick=async()=>{
       if(!confirm('Confermi la cancellazione? Potrai prenotare un nuovo slot.'))return;
-      await deleteDoc(slotDoc.ref);
-      delete bk.slots[slotDoc.id];
+      const{data:ok}=await sb.rpc('cancella_prenotazione',{p_ref:ref});
+      if(!ok){ showToast('Errore nella cancellazione','error'); return; }
       showToast('Prenotazione cancellata','success');
       result.innerHTML=`<div style="font-size:12px;color:var(--green);text-align:center;">✓ Cancellata. Ora puoi prenotare un nuovo slot.</div>`;
       input.value='';
-      // if we know the company, refresh slots
-      if(bk.selectedCo&&slotData.coId===bk.selectedCo.id){
+      if(bk.selectedCal&&found.calendar_id===bk.selectedCal.id){
+        await loadSlots(bk.selectedCal.id);
         const el=document.getElementById('step-content');
         if(el&&bk.step===2) renderStep2(el);
       }
@@ -522,32 +492,38 @@ async function confirmBooking(){
   const dateStr=parts[1], time=parts[2];
   const fullName=fn+' '+ln;
   const ref=uid().toUpperCase();
-  const co=bk.selectedCo;
+  const cal=bk.selectedCal;
 
-  const current=bk.slots[bk.selectedSlotKey];
-  if(current?.booked){ showToast('Slot già prenotato, scegline un altro','error'); bk.step=2; render(); return; }
-
-  const slotData={key:bk.selectedSlotKey,coId:co.id,dateStr,time,booked:true,bookerName:fullName,bookerEmail:email,notes,bookedAt:new Date().toISOString(),ref,blocked:false};
-  try{
-    await setDoc(doc(db,'slots',bk.selectedSlotKey),slotData);
-    bk.slots[bk.selectedSlotKey]=slotData;
-  }catch(e){ showToast('Errore di connessione, riprova','error'); btn.disabled=false; btn.textContent='Conferma prenotazione'; return; }
+  const{error}=await sb.from('booking_slots').insert({
+    calendar_id:cal.id, data:dateStr, ora:time, booked:true,
+    booker_nome:fn, booker_cognome:ln, booker_email:email, note:notes,
+    booked_at:new Date().toISOString(), ref
+  });
+  if(error){
+    // unique(calendar_id,data,ora): se qualcun altro ha prenotato nel
+    // frattempo lo stesso slot, l'insert fallisce qui invece di
+    // sovrascrivere silenziosamente la prenotazione altrui.
+    showToast(error.code==='23505'?'Slot appena prenotato da qualcun altro, scegline un altro':'Errore di connessione, riprova','error');
+    btn.disabled=false; btn.textContent='Conferma prenotazione';
+    bk.step=2; await loadSlots(cal.id); render();
+    return;
+  }
 
   let emailOk=false;
   const cfg=bk.config;
-  if(cfg.pubkey&&cfg.serviceId){
+  if(cfg.pubkey&&cfg.service_id){
     const [dy,dm,dd]=dateStr.split('-');
-  const bookingDateFormatted=dd+'/'+dm+'/'+dy;
-  const params={company_name:co.name,booking_date:bookingDateFormatted,booking_time:time,duration:co.duration,booker_name:fullName,ref_code:ref,booking_notes:notes||'Nessuna nota',consultant_email:cfg.consultantEmail||''};
+    const bookingDateFormatted=dd+'/'+dm+'/'+dy;
+    const params={company_name:cal.nome,booking_date:bookingDateFormatted,booking_time:time,duration:cal.duration_min,booker_name:fullName,ref_code:ref,booking_notes:notes||'Nessuna nota',consultant_email:cal.email_notifiche||''};
     try{
       const promises=[];
-      if(cfg.tplClient&&email) promises.push(emailjs.send(cfg.serviceId,cfg.tplClient,{...params,to_email:email,to_name:fullName}));
-      if(cfg.tplConsultant&&cfg.consultantEmail) promises.push(emailjs.send(cfg.serviceId,cfg.tplConsultant,{...params,to_email:cfg.consultantEmail,to_name:'Consulente'}));
+      if(cfg.tpl_client&&email) promises.push(emailjs.send(cfg.service_id,cfg.tpl_client,{...params,to_email:email,to_name:fullName}));
+      if(cfg.tpl_consultant&&cal.email_notifiche) promises.push(emailjs.send(cfg.service_id,cfg.tpl_consultant,{...params,to_email:cal.email_notifiche,to_name:'Consulente'}));
       await Promise.all(promises); emailOk=true;
     }catch(e){ console.warn('EmailJS:',e); }
   }
 
-  bk.confirmData={fullName,dateStr,time,ref,emailOk,coName:co.name,duration:co.duration};
+  bk.confirmData={fullName,dateStr,time,ref,emailOk,calName:cal.nome,duration:cal.duration_min};
   bk.step=4; render();
 }
 
