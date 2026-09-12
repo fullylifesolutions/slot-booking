@@ -94,8 +94,12 @@ body{font-family:'Sora',sans-serif;background:var(--bg);color:var(--text);min-he
 <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script>
-const SUPABASE_URL = "https://rronmtbpvhetoiddynmz.supabase.co";
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJyb25tdGJwdmhldG9pZGR5bm16Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA4NDA4NzEsImV4cCI6MjA5NjQxNjg3MX0.MVqdH3aTlXWukzZCbv171uaqiiF3n6wmK3KfYoitlpA";
+// PROD su github.io, TEST in locale
+const SUPABASE_ENV = window.location.hostname.includes('github.io')
+  ? { url: 'https://atpsnetvtefqsiaptnaf.supabase.co', key: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF0cHNuZXR2dGVmcXNpYXB0bmFmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkxMzc3NzMsImV4cCI6MjEwNDcxMzc3M30.KxSP7LxbiJXjmz55UrdJLl89LEaKN3tAJUt8eTLXA14' }
+  : { url: 'https://rronmtbpvhetoiddynmz.supabase.co', key: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJyb25tdGJwdmhldG9pZGR5bm16Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA4NDA4NzEsImV4cCI6MjA5NjQxNjg3MX0.MVqdH3aTlXWukzZCbv171uaqiiF3n6wmK3KfYoitlpA' };
+const SUPABASE_URL = SUPABASE_ENV.url;
+const SUPABASE_ANON_KEY = SUPABASE_ENV.key;
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 const DAYS_IT=['','Lunedì','Martedì','Mercoledì','Giovedì','Venerdì','Sabato','Domenica'];
