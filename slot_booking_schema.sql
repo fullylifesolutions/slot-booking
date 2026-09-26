@@ -53,6 +53,8 @@ create table public.booking_slots (
                                           -- cliente (un cliente prenota tipicamente 6+ slot), mostrato
                                           -- al prenotante per gestirle/cancellarle tutte insieme
     blocked         boolean not null default false,
+    email_cliente_inviata_at    timestamptz, -- anti-doppio-invio Edge Function booking-email (vedi booking_email_brevo.sql)
+    email_consulente_inviata_at timestamptz,
     created_at      timestamptz not null default now(),
     -- Il vincolo unique fa da lock anti-doppia-prenotazione: due insert
     -- concorrenti sullo stesso (calendar_id,data,ora) non possono
@@ -181,6 +183,10 @@ grant select on public.booking_calendars_public to anon, authenticated;
 grant select on public.booking_slots_public to anon, authenticated;
 grant insert on public.booking_slots to anon, authenticated;
 grant select, insert, update, delete on public.booking_calendars, public.booking_slots to authenticated;
+-- Edge Function booking-email (service key): legge prenotazione+calendario,
+-- aggiorna le colonne email_*_inviata_at. Vedi booking_email_brevo.sql.
+grant select, update on public.booking_slots     to service_role;
+grant select         on public.booking_calendars to service_role;
 
 -- ----------------------------------------------------------------------------
 -- Funzioni per operazioni pubbliche che richiedono dati sensibili:
