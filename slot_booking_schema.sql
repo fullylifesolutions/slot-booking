@@ -6,12 +6,10 @@
 --  DOPO lo schema GESPP.
 --
 --  Modello: un "calendario" (booking_calendars) è o il calendario di
---  un'azienda (company_id valorizzato, un solo calendario per azienda) o il
---  calendario condiviso "Liberi Professionisti" (company_id null — più
---  righe con company_id null sono permesse dal vincolo unique, Postgres non
---  considera due NULL uguali: va garantito un solo pool a livello
---  applicativo, es. l'interfaccia di gestione impedisce di crearne un
---  secondo, non un vincolo DB).
+--  un'azienda (company_id valorizzato; anche più calendari per azienda,
+--  uno per servizio, indipendenti — vedi calendari_multipli.sql) o il
+--  calendario condiviso "Liberi Professionisti" (company_id null — uno
+--  solo, garantito dall'indice unico parziale uq_booking_calendars_pool).
 --
 --  Uno "slot" (booking_slots) esiste come riga SOLO quando è prenotato o
 --  bloccato manualmente — gli orari disponibili non prenotati sono
@@ -33,10 +31,11 @@ create table public.booking_calendars (
     pin             text,                -- MAI esposto via select diretta pubblica, solo via verifica_pin_calendario()
     email_notifiche text,
     note            text,
-    created_at      timestamptz not null default now(),
-    unique (company_id)
+    created_at      timestamptz not null default now()
 );
 create index idx_calendars_company on public.booking_calendars(company_id);
+create unique index uq_booking_calendars_pool on public.booking_calendars ((company_id is null))
+    where company_id is null;
 
 create table public.booking_slots (
     id              uuid primary key default gen_random_uuid(),
