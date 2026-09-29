@@ -226,12 +226,9 @@ function generateSlots(cal, date){
     }
   }
   if(cal.max_per_day){
-    let bookedCount=slots.filter(s=>s.booked).length;
-    return slots.map(s=>{
-      if(!s.booked && bookedCount>=cal.max_per_day) return {...s, booked:true, maxReached:true};
-      if(s.booked) bookedCount++;
-      return s;
-    });
+    // giorno pieno = prenotati >= massimo; i prenotati si contano una volta sola
+    const pieno=slots.filter(s=>s.booked).length>=cal.max_per_day;
+    return slots.map(s=>(!s.booked && pieno) ? {...s, booked:true, maxReached:true} : s);
   }
   return slots;
 }
