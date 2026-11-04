@@ -78,14 +78,12 @@ create index idx_slots_client_code on public.booking_slots(client_code);
 -- colonne non ci sono, nessuna configurazione di sicurezza potrebbe
 -- comunque esporle), non da un filtro di righe.
 -- ----------------------------------------------------------------------------
--- email_notifiche e' inclusa: serve al browser del prenotante per passarla
--- a EmailJS come destinatario della notifica al consulente (l'invio parte
--- dal client, non c'e' un server intermedio). E' l'indirizzo di lavoro del
--- consulente, non un dato del prenotante ne' un segreto come il pin.
+-- email_notifiche NON è inclusa: le email le manda la Edge Function
+-- booking-email, che la legge da booking_calendars con la service key
+-- (vedi rimozione_emailjs.sql).
 create view public.booking_calendars_public as
     select id, company_id, nome, color, duration_min, schedules, max_per_day, start_date, end_date,
-           (pin is not null) as ha_pin,  -- rivela solo SE serve un pin, mai il suo valore
-           email_notifiche
+           (pin is not null) as ha_pin  -- rivela solo SE serve un pin, mai il suo valore
     from public.booking_calendars;
 
 create view public.booking_slots_public as
@@ -239,35 +237,3 @@ end;
 $$;
 grant execute on function public.cancella_prenotazione(uuid, text) to anon, authenticated;
 
--- ----------------------------------------------------------------------------
--- Configurazione EmailJS (una riga sola) per le email di conferma prenotazione.
--- Non è un segreto: la "public key" EmailJS è pensata per stare lato client,
--- come la anon key di Supabase — leggibile pubblicamente per design, così la
--- pagina di prenotazione (anonima) può inviare l'email di conferma da sola.
--- L'email del consulente da notificare è invece per-calendario
--- (booking_calendars.email_notifiche), non più un unico indirizzo globale
--- come nella versione Firestore: ogni azienda avvisa il proprio consulente.
--- ----------------------------------------------------------------------------
-create table public.booking_email_config (
-    id              integer primary key default 1 check (id = 1), -- riga singola
-    pubkey          text,
-    service_id      text,
-    tpl_client      text,
-    tpl_consultant  text
-);
-insert into public.booking_email_config (id) values (1) on conflict (id) do nothing;
-
-alter table public.booking_email_config enable row level security;
-
-create policy email_config_read on public.booking_email_config
-    for select to anon, authenticated using (true);
-
-create policy email_config_write on public.booking_email_config
-    for update to authenticated using (
-        public.is_admin() or exists (select 1 from public.app_users u where u.id = auth.uid() and u.attivo)
-    ) with check (
-        public.is_admin() or exists (select 1 from public.app_users u where u.id = auth.uid() and u.attivo)
-    );
-
-grant select on public.booking_email_config to anon, authenticated;
-grant update on public.booking_email_config to authenticated;
