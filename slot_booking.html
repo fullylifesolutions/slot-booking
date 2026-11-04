@@ -91,7 +91,6 @@ body{font-family:'Sora',sans-serif;background:var(--bg);color:var(--text);min-he
 </div>
 <div class="main" id="main"><div class="loading">Caricamento...</div></div>
 
-<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script>
 // PROD su github.io, TEST in locale
@@ -108,7 +107,7 @@ const MONTHS_IT=['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio
 // ── STATE ─────────────────────────────────────────────────────────────────
 const bk={
   step:1, // 1=calendario|pin, 2=slot, 3=form, 4=confirm
-  calendars:[], slots:{}, config:{},
+  calendars:[], slots:{},
   selectedCal:null, selectedSlotKey:null,
   weekOffset:0, minWeekOffset:0,
   confirmData:null,
@@ -141,12 +140,8 @@ const urlPin = urlParams.get('pin');
 
 // ── INIT ──────────────────────────────────────────────────────────────────
 async function init(){
-  const [calRes, cfgRes] = await Promise.all([
-    sb.from('booking_calendars_public').select('*'),
-    sb.from('booking_email_config').select('*').eq('id',1).single()
-  ]);
+  const calRes = await sb.from('booking_calendars_public').select('*');
   bk.calendars = (calRes.data||[]).slice().sort((a,b)=>a.nome.localeCompare(b.nome));
-  if(cfgRes.data){ bk.config=cfgRes.data; if(bk.config.pubkey) emailjs.init(bk.config.pubkey); }
 
   // direct link: preselect calendar
   if(urlCalId){
@@ -536,19 +531,15 @@ async function confirmBooking(){
     return;
   }
 
+  // Email di conferma (cliente + consulente) inviate lato server dalla Edge
+  // Function booking-email: le passiamo solo la chiave della prenotazione
+  // appena creata, destinatari e contenuti li rilegge lei dal DB.
   let emailOk=false;
-  const cfg=bk.config;
-  if(cfg.pubkey&&cfg.service_id){
-    const [dy,dm,dd]=dateStr.split('-');
-    const bookingDateFormatted=dd+'/'+dm+'/'+dy;
-    const params={company_name:cal.nome,booking_date:bookingDateFormatted,booking_time:time,duration:cal.duration_min,booker_name:fullName,ref_code:clientCode,booking_notes:notes||'Nessuna nota',consultant_email:cal.email_notifiche||''};
-    try{
-      const promises=[];
-      if(cfg.tpl_client&&email) promises.push(emailjs.send(cfg.service_id,cfg.tpl_client,{...params,to_email:email,to_name:fullName}));
-      if(cfg.tpl_consultant&&cal.email_notifiche) promises.push(emailjs.send(cfg.service_id,cfg.tpl_consultant,{...params,to_email:cal.email_notifiche,to_name:'Consulente'}));
-      await Promise.all(promises); emailOk=true;
-    }catch(e){ console.warn('EmailJS:',e); }
-  }
+  try{
+    const{data:mailRes,error:mailErr}=await sb.functions.invoke('booking-email',{body:{calendar_id:cal.id,data:dateStr,ora:time,client_code:clientCode}});
+    if(mailErr) console.warn('booking-email:',mailErr);
+    else emailOk=!!(mailRes&&mailRes.ok);
+  }catch(e){ console.warn('booking-email:',e); }
 
   bk.confirmData={fullName,dateStr,time,clientCode,emailOk,calName:cal.nome,duration:cal.duration_min};
   bk.step=4; render();
